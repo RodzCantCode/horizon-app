@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Calendario Horizon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+<style>
+/* Herramienta interna con el sistema de Horizon: fondo tinta, una sola familia (Archivo) cuyo
+   contraste sale de la anchura, azul solo en la acción principal. Vista de agenda por plan. */
+:root {
+  color-scheme: dark;
+  --tinta-900: #07090c;
+  --tinta-800: #0d1218;
+  --tinta-700: #12181f;
+  --tinta-600: #1a222b;
+  --linea: #1f2831;
+  --linea-fuerte: #2c3945;
+  --papel: #f1f5f8;
+  --papel-medio: #98a5b2;
+  --papel-tenue: #7d8b98;
+  --azul: #169eff;
+  --azul-tinta: #04121e;
+  --ambar: #e9a85e;
+  --ambar-fondo: rgba(233, 168, 94, 0.14);
+  --verde: #62c792;
+  --verde-fondo: rgba(98, 199, 146, 0.14);
+  --rojo: #ff8273;
+  --rojo-fondo: rgba(255, 130, 115, 0.12);
+  --fuente: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --curva: cubic-bezier(0.16, 1, 0.3, 1);
+}
+* { box-sizing: border-box; }
+html, body { background: var(--tinta-900); color: var(--papel); }
+body {
+  font-family: var(--fuente);
+  font-size: 15px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  padding-inline: clamp(16px, 4vw, 48px);
+  padding-block: 0 64px;
+}
+button, input, select { font: inherit; color: inherit; }
+.ancha { font-stretch: 125%; font-weight: 800; text-transform: uppercase; line-height: 0.9; letter-spacing: -0.01em; }
+.estrecha { font-stretch: 75%; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem; color: var(--papel-tenue); }
+
+/* Cabecera */
+.barra {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px;
+  padding-block: 18px 14px; margin-bottom: 28px;
+  background: var(--tinta-900); border-bottom: 1px solid var(--linea);
+}
+.logo { font-stretch: 112%; font-weight: 800; font-size: 1.05rem; letter-spacing: -0.01em; }
+.logo b { color: var(--azul); }
+.logo span { font-stretch: 75%; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem; color: var(--papel-tenue); margin-left: 10px; }
+.pestanas { display: flex; gap: 22px; margin-left: auto; }
+.pestanas button {
+  background: none; border: 0; padding: 6px 0; cursor: pointer;
+  font-stretch: 75%; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.8rem;
+  color: var(--papel-tenue); border-bottom: 2px solid transparent;
+}
+.pestanas button[aria-current="page"] { color: var(--papel); border-bottom-color: var(--azul); }
+.pestanas button:hover { color: var(--papel); }
+
+main { max-width: 1120px; margin-inline: auto; display: grid; gap: 22px; }
+.cabecera-vista { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.titular { font-size: clamp(2.2rem, 7vw, 3.6rem); margin: 0; text-wrap: balance; }
+
+/* Botones y campos */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 40px; padding: 0 20px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--linea-fuerte); background: var(--tinta-600); color: var(--papel);
+  font-weight: 600; font-size: 0.9rem; white-space: nowrap;
+  transition: transform .12s var(--curva), background .15s, border-color .15s;
+}
+.btn:hover { border-color: var(--papel-tenue); }
+.btn:active { transform: scale(0.97); }
+.btn--accent { background: var(--azul); border-color: var(--azul); color: var(--azul-tinta); }
+.btn--accent:hover { background: #3aadff; border-color: #3aadff; }
+.btn--sm { height: 32px; padding: 0 14px; font-size: 0.82rem; }
+.btn--peligro { color: var(--rojo); }
+.btn[disabled] { opacity: 0.4; cursor: not-allowed; transform: none; }
+.campo, .selector {
+  height: 40px; border-radius: 12px; border: 1px solid var(--linea-fuerte);
+  background: var(--tinta-600); padding: 0 12px; min-width: 0;
+}
+.selector { border-radius: 999px; padding: 0 30px 0 14px; height: 34px; font-size: 0.85rem; cursor: pointer; appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--papel-tenue) 50%), linear-gradient(135deg, var(--papel-tenue) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 15px, calc(100% - 11px) 15px; background-size: 5px 5px; background-repeat: no-repeat; }
+:focus-visible { outline: 2px solid var(--azul); outline-offset: 2px; }
+label.etiqueta { display: grid; gap: 6px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  height: 32px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--linea-fuerte); background: transparent; color: var(--papel-medio); font-size: 0.85rem;
+}
+.chip[aria-pressed="true"] { background: var(--papel); color: var(--tinta-900); border-color: var(--papel); font-weight: 600; }
+
+/* Resumen */
+.resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--linea); border: 1px solid var(--linea); border-radius: 16px; overflow: hidden; }
+.resumen div { background: var(--tinta-800); padding: 14px 18px; display: grid; gap: 4px; }
+.resumen strong { font-size: 1.9rem; font-stretch: 125%; font-weight: 800; line-height: 1; }
+.resumen .alerta strong { color: var(--ambar); }
+
+/* Panel de nuevo plan */
+.panel { background: var(--tinta-800); border: 1px solid var(--linea); border-radius: 18px; padding: clamp(16px, 3vw, 24px); display: grid; gap: 18px; }
+.panel__campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+.opciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.opcion {
+  text-align: left; cursor: pointer; display: grid; gap: 10px; padding: 14px; border-radius: 14px;
+  background: var(--tinta-700); border: 1px solid var(--linea-fuerte);
+}
+.opcion[aria-pressed="true"] { border-color: var(--papel); box-shadow: inset 0 0 0 1px var(--papel); }
+.opcion[disabled] { opacity: 0.5; cursor: not-allowed; }
+.opcion__nombre { font-weight: 700; }
+.mini { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.mini div { display: grid; gap: 4px; justify-items: center; font-size: 0.7rem; color: var(--papel-tenue); font-stretch: 75%; font-weight: 600; text-transform: uppercase; }
+.mini i { width: 100%; height: 6px; border-radius: 3px; background: var(--tinta-600); }
+.mini i.slide { background: var(--papel-medio); }
+.mini i.reel { background: var(--ambar); }
+.mini i.choque { outline: 2px solid var(--rojo); outline-offset: 1px; }
+.nota-choque { font-size: 0.82rem; color: var(--verde); }
+.nota-choque.mal { color: var(--rojo); }
+
+/* Planes */
+.plan { border: 1px solid var(--linea); border-radius: 18px; background: var(--tinta-800); overflow: hidden; }
+.plan__cabecera { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 16px 18px; border-bottom: 1px solid var(--linea); }
+.plan__titulo { font-size: 1.35rem; margin: 0; }
+.plan__meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--papel-medio); font-size: 0.9rem; }
+.plan__acciones { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.etiqueta-plan { font-size: 0.75rem; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--linea-fuerte); color: var(--papel-medio); }
+.etiqueta-plan--ejemplo { border-style: dashed; }
+.plan__aviso { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 18px; background: var(--tinta-700); border-bottom: 1px solid var(--linea); }
+
+.pieza {
+  display: grid; grid-template-columns: 92px 64px minmax(0, 1fr) 140px 150px; gap: 14px; align-items: center;
+  padding: 12px 18px; border-bottom: 1px solid var(--linea);
+}
+.pieza:last-child { border-bottom: 0; }
+.pieza__dia { display: grid; }
+.pieza__num { font-weight: 700; font-size: 0.95rem; }
+.pieza__cuerpo { display: grid; gap: 3px; min-width: 0; }
+.pieza__nombre { font-weight: 600; }
+.formato { justify-self: start; font-size: 0.72rem; font-stretch: 75%; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 9px; border-radius: 6px; }
+.formato--slide { color: var(--papel); background: var(--tinta-600); border: 1px solid var(--linea-fuerte); }
+.formato--reel { color: var(--ambar); background: var(--ambar-fondo); border: 1px solid rgba(233,168,94,.35); }
+.avisos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.aviso { font-size: 0.78rem; padding: 2px 9px; border-radius: 999px; background: var(--rojo-fondo); color: var(--rojo); border: 0; }
+button.aviso { cursor: pointer; }
+.vencido { color: var(--rojo); }
+.estado--pendiente { color: var(--papel-medio); }
+.estado--diseno { color: var(--ambar); border-color: rgba(233,168,94,.45); }
+.estado--listo { color: var(--verde); border-color: rgba(98,199,146,.45); }
+.estado--metricool { color: var(--tinta-900); background-color: var(--verde); border-color: var(--verde); font-weight: 600; }
+.estado--metricool { background-image: linear-gradient(45deg, transparent 50%, var(--tinta-900) 50%), linear-gradient(135deg, var(--tinta-900) 50%, transparent 50%); }
+
+.vacio { padding: 40px 20px; text-align: center; color: var(--papel-medio); border: 1px dashed var(--linea-fuerte); border-radius: 18px; }
+
+/* Estrategias y piezas */
+.tarjeta { border: 1px solid var(--linea); border-radius: 18px; background: var(--tinta-800); padding: 16px 18px; display: grid; gap: 14px; }
+.tarjeta--archivada { opacity: 0.55; }
+.fila { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.fila .campo { flex: 1 1 220px; }
+.cuenta { font-size: 0.85rem; color: var(--papel-medio); }
+.cuenta .fuera { color: var(--ambar); }
+.semana-scroll { overflow-x: auto; }
+.semana { display: grid; grid-template-columns: repeat(7, minmax(100px, 1fr)); gap: 8px; min-width: 720px; }
+.semana__col { display: grid; align-content: start; gap: 6px; min-height: 84px; padding: 8px; border-radius: 12px; background: var(--tinta-700); }
+.semana__col--d { box-shadow: inset 0 2px 0 var(--papel); }
+.semana__item { display: flex; align-items: start; justify-content: space-between; gap: 6px; font-size: 0.8rem; padding: 6px 8px; border-radius: 8px; line-height: 1.25; }
+.semana__item.slide { background: var(--tinta-600); }
+.semana__item.reel { background: var(--ambar-fondo); color: #f4cfa2; }
+.semana__item button { background: none; border: 0; cursor: pointer; color: var(--papel-tenue); padding: 0 2px; font-size: 1rem; line-height: 1; }
+.problemas { margin: 0; padding-left: 18px; color: var(--rojo); font-size: 0.88rem; }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+.toggle { height: 30px; min-width: 52px; padding: 0 10px; border-radius: 8px; cursor: pointer; border: 1px solid var(--linea-fuerte); background: transparent; color: var(--papel-tenue); font-size: 0.78rem; display: grid; line-height: 1.05; place-items: center; }
+.toggle[aria-pressed="true"] { background: var(--papel); color: var(--tinta-900); border-color: var(--papel); font-weight: 600; }
+.check { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; font-size: 0.9rem; color: var(--papel-medio); }
+.check input { width: 18px; height: 18px; accent-color: var(--papel); }
+.numero { width: 70px; }
+.texto-tenue { color: var(--papel-tenue); font-size: 0.85rem; }
+.pie { display: flex; justify-content: flex-end; gap: 10px; align-items: center; flex-wrap: wrap; padding-top: 10px; }
+
+@media (max-width: 760px) {
+  .pestanas { margin-left: 0; width: 100%; }
+  .pieza { grid-template-columns: 78px minmax(0, 1fr); gap: 8px 12px; }
+  .pieza .formato { grid-column: 2; grid-row: 1; }
+  .pieza__dia { grid-row: 1 / span 2; }
+  .pieza__cuerpo { grid-column: 2; }
+  .pieza .selector { grid-column: span 1; width: 100%; }
+  .pieza .selector:first-of-type { grid-column: 1 / span 1; }
+}
+@media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+</style>
+</head>
+<body>
+
+
+<header class="barra">
+  <div class="logo">Horizon<b>.</b>Sport<span>Calendario de contenido</span></div>
+  <nav class="pestanas" aria-label="Secciones">
+    <button data-action="tab" data-v="plan">Plan</button>
+    <button data-action="tab" data-v="estrategias">Estrategias</button>
+    <button data-action="tab" data-v="piezas">Piezas</button>
+  </nav>
+</header>
+<main id="app"></main>
+
+<script>
+(function () {
+  const CLAVE = 'horizon-calendario-v1';
+  const PERSONAS = ['Mario', 'Izan', 'Lluís'];
+  const ESTADOS = [['pendiente', 'Por hacer'], ['diseno', 'En diseño'], ['listo', 'Listo'], ['metricool', 'En Metricool']];
+  const OFFSETS = [-1, 0, 1, 2, 3, 4, 5];
+  const DIA_REF = { '-1': 'Jue', 0: 'Vie', 1: 'Sáb', 2: 'Dom', 3: 'Lun', 4: 'Mar', 5: 'Mié' };
+  const D_LABEL = o => (o === 0 ? 'D' : o < 0 ? 'D' + o : 'D+' + o);
+  const CANALES = [['ig', 'Instagram'], ['tiktok', 'TikTok'], ['shorts', 'Shorts']];
+  const TODOS = OFFSETS.slice();
+
+  // ---------- Fechas: solo días, en UTC, para que el cambio de hora no mueva nada ----------
+  const aUTC = iso => { const [y, m, d] = iso.split('-').map(Number); return Date.UTC(y, m - 1, d); };
+  const deUTC = t => new Date(t).toISOString().slice(0, 10);
+  const sumar = (iso, n) => deUTC(aUTC(iso) + n * 86400000);
+  const fmt = (iso, opts) => new Date(aUTC(iso)).toLocaleDateString('es-ES', Object.assign({ timeZone: 'UTC' }, opts));
+  const diaSemana = iso => fmt(iso, { weekday: 'short' }).replace('.', '');
+  const diaMes = iso => fmt(iso, { day: 'numeric', month: 'short' }).replace('.', '');
+  const largo = iso => diaSemana(iso) + ' ' + diaMes(iso);
+  const hoy = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+  const uid = () => Math.random().toString(36).slice(2, 9);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // ---------- Datos de partida ----------
+  function semilla() {
+    const piezas = [
+      { id: 't0', nombre: 'T0 · Semana sin podcast', formato: 'slide', requiereEp: false, dias: TODOS.slice(), prep: 3, canales: ['ig', 'tiktok'], archivada: false },
+      { id: 't1', nombre: 'T1 · Próximos invitados', formato: 'slide', requiereEp: false, dias: [4, 5], prep: 2, canales: ['ig', 'tiktok'], archivada: false },
+      { id: 't2', nombre: 'T2 · Valor + CTA', formato: 'slide', requiereEp: true, dias: [1, 2, 3, 4], prep: 3, canales: ['ig', 'tiktok'], archivada: false },
+      { id: 't3', nombre: 'T3 · Frases de invitados', formato: 'slide', requiereEp: false, dias: TODOS.slice(), prep: 2, canales: ['ig', 'tiktok'], archivada: false },
+      { id: 't4', nombre: 'T4 · Historia del invitado', formato: 'slide', requiereEp: true, dias: [-1], prep: 3, canales: ['ig', 'tiktok'], archivada: false },
+      { id: 'rp', nombre: 'Clip principal', formato: 'reel', requiereEp: true, dias: [0], prep: 2, canales: ['ig', 'tiktok', 'shorts'], archivada: false },
+      { id: 'rc', nombre: 'Clip secundario', formato: 'reel', requiereEp: true, dias: [1, 2, 3, 4, 5], prep: 2, canales: ['ig', 'tiktok', 'shorts'], archivada: false },
+      { id: 'rt', nombre: 'Teaser', formato: 'reel', requiereEp: true, dias: [-1], prep: 2, canales: ['ig', 'tiktok', 'shorts'], archivada: false },
+      { id: 'ra', nombre: 'Clip de archivo', formato: 'reel', requiereEp: false, dias: TODOS.slice(), prep: 1, canales: ['ig', 'tiktok', 'shorts'], archivada: false }
+    ];
+    const estrategias = [
+      { id: 'e1', nombre: 'E1 · Anticipación fuerte', tipo: 'con', items: [['t4', -1], ['rp', 0], ['rc', 2], ['t2', 4], ['rc', 5]] },
+      { id: 'e2', nombre: 'E2 · Valor primero', tipo: 'con', items: [['rt', -1], ['rp', 0], ['t2', 1], ['t3', 4], ['rc', 5]] },
+      { id: 'e3', nombre: 'E3 · Recopilación', tipo: 'sin', items: [['t3', -1], ['ra', 1], ['ra', 4], ['t1', 5]] },
+      { id: 'e4', nombre: 'E4 · Actualidad', tipo: 'sin', items: [['t0', 0], ['ra', 2], ['ra', 4], ['t1', 5]] }
+    ].map(e => Object.assign(e, { items: e.items.map(([piezaId, offset]) => ({ piezaId, offset })) }));
+    const s = { piezas, estrategias, planes: [] };
+    // Planes de ejemplo para enseñar el flujo; se marcan como tales y no usan nombres de invitados.
+    const ej = [
+      { tipo: 'con', numero: '05', ancla: '2026-10-16', estr: 'e1', asignar: { t4: ['Lluís', 'diseno'], rp: ['Mario', 'pendiente'] } },
+      { tipo: 'con', numero: '06', ancla: '2026-10-23', estr: 'e2', asignar: {} },
+      { tipo: 'sin', numero: '', ancla: '2026-10-30', estr: 'e3', asignar: {} }
+    ];
+    ej.forEach(p => {
+      const plan = crearPlan(s, p.tipo, p.numero, '', p.ancla, p.estr);
+      plan.ejemplo = true;
+      plan.items.forEach(it => { const a = p.asignar[it.piezaId]; if (a) { it.responsable = a[0]; it.estado = a[1]; } });
+      s.planes.push(plan);
+    });
+    return s;
+  }
+
+  function cargar() {
+    try { const raw = localStorage.getItem(CLAVE); if (raw) return JSON.parse(raw); } catch (e) {}
+    return null;
+  }
+  function guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(S)); } catch (e) {} }
+
+  // ---------- Lógica ----------
+  const pieza = (s, id) => s.piezas.find(p => p.id === id);
+
+  function crearPlan(s, tipo, numero, invitado, ancla, estrId) {
+    const e = s.estrategias.find(x => x.id === estrId);
+    return {
+      id: uid(), tipo, numero, invitado, ancla, estrategiaId: e.id, estrategiaNombre: e.nombre, ejemplo: false,
+      // Copia fija: editar la estrategia después no cambia un plan que ya está en marcha.
+      items: e.items.slice().sort((a, b) => a.offset - b.offset).map(i => {
+        const p = pieza(s, i.piezaId);
+        return { id: uid(), piezaId: p.id, nombre: p.nombre, formato: p.formato, canales: p.canales.slice(), prep: p.prep, offset: i.offset, fecha: sumar(ancla, i.offset), responsable: '', estado: 'pendiente', revisar: false };
+      })
+    };
+  }
+
+  function problemas(e) {
+    const out = [];
+    const vistos = {};
+    e.items.forEach(i => {
+      const p = pieza(S, i.piezaId);
+      if (!p) { out.push('Usa una pieza que ya no existe.'); return; }
+      if (p.archivada) out.push(p.nombre + ' está archivada.');
+      if (!p.dias.includes(i.offset)) out.push(p.nombre + ' no puede ir el ' + DIA_REF[i.offset] + ' (' + D_LABEL(i.offset) + ').');
+      if (e.tipo === 'sin' && p.requiereEp) out.push(p.nombre + ' necesita episodio y esta estrategia es para semanas sin episodio.');
+      vistos[i.offset] = (vistos[i.offset] || 0) + 1;
+    });
+    Object.keys(vistos).forEach(o => { if (vistos[o] > 1) out.push('Hay ' + vistos[o] + ' piezas el ' + DIA_REF[o] + '.'); });
+    if (!e.items.length) out.push('No tiene piezas.');
+    return out;
+  }
+
+  function cuenta(items, getFormato) {
+    let s = 0, r = 0;
+    items.forEach(i => { const f = getFormato(i); if (f === 'slide') s++; else if (f === 'reel') r++; });
+    return { s, r };
+  }
+  const textoCuenta = c => '<span class="' + (c.s < 1 || c.s > 2 ? 'fuera' : '') + '">' + c.s + ' Slide' + (c.s === 1 ? '' : 's') + '</span> · <span class="' + (c.r < 2 || c.r > 3 ? 'fuera' : '') + '">' + c.r + ' Reel' + (c.r === 1 ? '' : 's') + '</span>';
+
+  function etiquetaPlan(p) { return p.tipo === 'con' ? 'Ep ' + (p.numero || '?') : 'Semana sin episodio'; }
+
+  function ocupacion(excluirPlanId) {
+    const m = {};
+    S.planes.forEach(p => { if (p.id === excluirPlanId) return; p.items.forEach(it => { (m[it.fecha] = m[it.fecha] || []).push({ planId: p.id, itemId: it.id, etiqueta: etiquetaPlan(p) }); }); });
+    return m;
+  }
+
+  // ---------- Estado de la interfaz ----------
+  let S = cargar() || semilla();
+  const ui = { tab: 'plan', persona: 'todos', nuevo: false, np: { tipo: 'con', numero: '', invitado: '', fecha: '', estr: null }, editFecha: null, borrarPlan: null, borrarEstr: null, reset: false };
+  const app = document.getElementById('app');
+
+  function render() {
+    document.querySelectorAll('.pestanas button').forEach(b => b.setAttribute('aria-current', b.dataset.v === ui.tab ? 'page' : 'false'));
+    app.innerHTML = ui.tab === 'plan' ? vistaPlan() : ui.tab === 'estrategias' ? vistaEstrategias() : vistaPiezas();
+  }
+
+  // ---------- Vista: Plan ----------
+  function vistaPlan() {
+    const planes = S.planes.slice().sort((a, b) => a.ancla.localeCompare(b.ancla));
+    const ocup = ocupacion(null);
+    const limite14 = sumar(hoy, 14);
+    const proximas = [];
+    planes.forEach(p => p.items.forEach(it => { if (it.fecha >= hoy && it.fecha <= limite14) proximas.push(it); }));
+    const sinResp = proximas.filter(i => !i.responsable).length;
+    const sinMetricool = proximas.filter(i => i.estado !== 'metricool').length;
+    const revisar = planes.reduce((n, p) => n + p.items.filter(i => i.revisar).length, 0);
+
+    const filtros = [['todos', 'Todos']].concat(PERSONAS.map(p => [p, p])).concat([['sin', 'Sin asignar']]);
+    const tarjetas = planes.map(p => tarjetaPlan(p, ocup)).join('');
+
+    return `
+      <section class="cabecera-vista">
+        <h1 class="titular ancha">Plan</h1>
+        <button class="btn ${ui.nuevo ? '' : 'btn--accent'}" data-action="toggle-nuevo">${ui.nuevo ? 'Cerrar' : 'Nuevo plan'}</button>
+      </section>
+      ${ui.nuevo ? panelNuevo() : ''}
+      <section class="resumen" aria-label="Próximos 14 días">
+        <div><span class="estrecha">Próximos 14 días</span><strong>${proximas.length}</strong><span class="texto-tenue">piezas</span></div>
+        <div class="${sinResp ? 'alerta' : ''}"><span class="estrecha">Sin responsable</span><strong>${sinResp}</strong><span class="texto-tenue">de ${proximas.length}</span></div>
+        <div class="${sinMetricool ? 'alerta' : ''}"><span class="estrecha">Sin programar</span><strong>${sinMetricool}</strong><span class="texto-tenue">en Metricool</span></div>
+        <div class="${revisar ? 'alerta' : ''}"><span class="estrecha">Revisar en Metricool</span><strong>${revisar}</strong><span class="texto-tenue">por cambio de fecha</span></div>
+      </section>
+      <div class="chips" role="group" aria-label="Filtrar por responsable">
+        ${filtros.map(([v, t]) => `<button class="chip" data-action="persona" data-v="${v}" aria-pressed="${ui.persona === v}">${t}</button>`).join('')}
+      </div>
+      ${tarjetas || `<div class="vacio">Todavía no hay planes. Crea uno con la fecha del próximo episodio.</div>`}
+      <div class="pie">
+        ${ui.reset ? `<span class="texto-tenue">Se borrarán tus cambios y volverán los datos de ejemplo.</span>
+          <button class="btn btn--sm btn--peligro" data-action="reset-si">Restaurar</button>
+          <button class="btn btn--sm" data-action="reset-no">Cancelar</button>`
+          : `<button class="btn btn--sm" data-action="reset">Restaurar datos de ejemplo</button>`}
+      </div>`;
+  }
+
+  function panelNuevo() {
+    const np = ui.np;
+    const ocup = ocupacion(null);
+    const opciones = S.estrategias.filter(e => e.tipo === np.tipo).map(e => {
+      const probs = problemas(e);
+      const fechas = e.items.map(i => ({ off: i.offset, fecha: np.fecha ? sumar(np.fecha, i.offset) : null, formato: (pieza(S, i.piezaId) || {}).formato }));
+      const choques = np.fecha ? fechas.filter(f => ocup[f.fecha]).length : 0;
+      const c = cuenta(e.items, i => (pieza(S, i.piezaId) || {}).formato);
+      const celdas = OFFSETS.map(o => {
+        const f = fechas.find(x => x.off === o);
+        const etiqueta = np.fecha ? diaSemana(sumar(np.fecha, o)) + ' ' + sumar(np.fecha, o).slice(8).replace(/^0/, '') : DIA_REF[o];
+        return `<div><i class="${f ? f.formato : ''} ${f && f.fecha && ocup[f.fecha] ? 'choque' : ''}"></i>${etiqueta}</div>`;
+      }).join('');
+      return `<button class="opcion" data-action="np-estr" data-v="${e.id}" aria-pressed="${np.estr === e.id}" ${probs.length ? 'disabled' : ''}>
+        <span class="opcion__nombre">${esc(e.nombre)}</span>
+        <span class="cuenta">${textoCuenta(c)}</span>
+        <div class="mini">${celdas}</div>
+        ${probs.length ? `<span class="nota-choque mal">Revisa la estrategia antes de usarla</span>` : np.fecha ? `<span class="nota-choque ${choques ? 'mal' : ''}">${choques ? choques + (choques === 1 ? ' día coincide' : ' días coinciden') + ' con otro plan' : 'Sin choques'}</span>` : ''}
+      </button>`;
+    }).join('');
+    const listo = np.fecha && np.estr && (np.tipo === 'sin' || np.numero.trim());
+    return `<section class="panel" aria-label="Nuevo plan">
+      <div class="chips" role="group" aria-label="Tipo de semana">
+        <button class="chip" data-action="np-tipo" data-v="con" aria-pressed="${np.tipo === 'con'}">Con episodio</button>
+        <button class="chip" data-action="np-tipo" data-v="sin" aria-pressed="${np.tipo === 'sin'}">Sin episodio</button>
+      </div>
+      <div class="panel__campos">
+        ${np.tipo === 'con' ? `
+          <label class="etiqueta"><span class="estrecha">Nº de episodio</span><input class="campo" id="np-numero" data-np="numero" inputmode="numeric" value="${esc(np.numero)}" placeholder="07"></label>
+          <label class="etiqueta"><span class="estrecha">Invitado</span><input class="campo" id="np-invitado" data-np="invitado" value="${esc(np.invitado)}" placeholder="Opcional"></label>
+          <label class="etiqueta"><span class="estrecha">Publicación del episodio</span><input class="campo" type="date" id="np-fecha" data-np="fecha" value="${np.fecha}"></label>`
+        : `<label class="etiqueta"><span class="estrecha">Viernes de la semana</span><input class="campo" type="date" id="np-fecha" data-np="fecha" value="${np.fecha}"></label>`}
+      </div>
+      <div class="opciones">${opciones || '<div class="texto-tenue">No hay estrategias de este tipo.</div>'}</div>
+      <div class="fila"><button class="btn btn--accent" data-action="generar" ${listo ? '' : 'disabled'}>Generar plan</button></div>
+    </section>`;
+  }
+
+  function tarjetaPlan(p, ocup) {
+    const visibles = p.items.filter(it => ui.persona === 'todos' ? true : ui.persona === 'sin' ? !it.responsable : it.responsable === ui.persona);
+    if (!visibles.length && ui.persona !== 'todos') return '';
+    const c = cuenta(p.items, i => i.formato);
+    const editando = ui.editFecha === p.id;
+    const borrando = ui.borrarPlan === p.id;
+    const filas = visibles.map(it => {
+      const otros = (ocup[it.fecha] || []).filter(x => x.itemId !== it.id);
+      const limite = sumar(it.fecha, -it.prep);
+      const vencido = limite < hoy && (it.estado === 'pendiente' || it.estado === 'diseno');
+      const canales = it.canales.map(c => (CANALES.find(x => x[0] === c) || [c, c])[1]).join(' · ');
+      const avisos = [];
+      if (it.revisar) avisos.push(`<button class="aviso" data-action="revisado" data-plan="${p.id}" data-item="${it.id}">Cambió la fecha: revisar en Metricool ✓</button>`);
+      otros.forEach(o => avisos.push(`<span class="aviso">Mismo día que ${esc(o.etiqueta)}</span>`));
+      return `<div class="pieza">
+        <div class="pieza__dia"><span class="estrecha">${diaSemana(it.fecha)}</span><span class="pieza__num">${diaMes(it.fecha)}</span></div>
+        <span class="formato formato--${it.formato}">${it.formato === 'slide' ? 'Slide' : 'Reel'}</span>
+        <div class="pieza__cuerpo">
+          <span class="pieza__nombre">${esc(it.nombre)}</span>
+          <span class="estrecha ${vencido ? 'vencido' : ''}">${canales} · Preparar antes del ${largo(limite)}</span>
+          ${avisos.length ? `<div class="avisos">${avisos.join('')}</div>` : ''}
+        </div>
+        <select class="selector" aria-label="Responsable" id="r-${it.id}" data-campo="responsable" data-plan="${p.id}" data-item="${it.id}">
+          <option value="">Sin asignar</option>
+          ${PERSONAS.map(n => `<option ${it.responsable === n ? 'selected' : ''}>${n}</option>`).join('')}
+        </select>
+        <select class="selector estado--${it.estado}" aria-label="Estado" id="s-${it.id}" data-campo="estado" data-plan="${p.id}" data-item="${it.id}">
+          ${ESTADOS.map(([v, t]) => `<option value="${v}" ${it.estado === v ? 'selected' : ''}>${t}</option>`).join('')}
+        </select>
+      </div>`;
+    }).join('');
+    return `<article class="plan">
+      <div class="plan__cabecera">
+        <h2 class="plan__titulo ancha">${esc(etiquetaPlan(p))}</h2>
+        <div class="plan__meta">
+          ${p.tipo === 'con' ? `<span>${p.invitado ? esc(p.invitado) : 'Invitado por anunciar'}</span><span>·</span><span>Publica el ${largo(p.ancla)}</span>` : `<span>Semana del ${largo(sumar(p.ancla, -1))}</span>`}
+          <span class="etiqueta-plan">${esc(p.estrategiaNombre)}</span>
+          <span class="cuenta">${textoCuenta(c)}</span>
+          ${p.ejemplo ? '<span class="etiqueta-plan etiqueta-plan--ejemplo">Ejemplo</span>' : ''}
+        </div>
+        <div class="plan__acciones">
+          <button class="btn btn--sm" data-action="editar-fecha" data-id="${p.id}">Cambiar fecha</button>
+          <button class="btn btn--sm btn--peligro" data-action="borrar-plan" data-id="${p.id}">Eliminar</button>
+        </div>
+      </div>
+      ${editando ? `<div class="plan__aviso">
+        <label class="etiqueta"><span class="estrecha">${p.tipo === 'con' ? 'Nueva fecha del episodio' : 'Nuevo viernes de la semana'}</span><input class="campo" type="date" id="ef-${p.id}" value="${p.ancla}"></label>
+        <button class="btn btn--sm btn--accent" data-action="aplicar-fecha" data-id="${p.id}">Mover plan</button>
+        <button class="btn btn--sm" data-action="cancelar">Cancelar</button>
+      </div>` : ''}
+      ${borrando ? `<div class="plan__aviso"><span>Se eliminará el plan y sus ${p.items.length} piezas.</span>
+        <button class="btn btn--sm btn--peligro" data-action="borrar-plan-si" data-id="${p.id}">Eliminar</button>
+        <button class="btn btn--sm" data-action="cancelar">Cancelar</button></div>` : ''}
+      ${filas}
+    </article>`;
+  }
+
+  // ---------- Vista: Estrategias ----------
+  function vistaEstrategias() {
+    const activas = S.piezas.filter(p => !p.archivada);
+    const tarjetas = S.estrategias.map(e => {
+      const probs = problemas(e);
+      const c = cuenta(e.items, i => (pieza(S, i.piezaId) || {}).formato);
+      const cols = OFFSETS.map(o => {
+        const items = e.items.map((i, idx) => ({ i, idx })).filter(x => x.i.offset === o);
+        return `<div class="semana__col ${o === 0 && e.tipo === 'con' ? 'semana__col--d' : ''}">
+          <span class="estrecha">${DIA_REF[o]} · ${D_LABEL(o)}</span>
+          ${items.map(({ i, idx }) => { const p = pieza(S, i.piezaId) || { nombre: '?', formato: '' };
+            return `<div class="semana__item ${p.formato}"><span>${esc(p.nombre)}</span><button aria-label="Quitar ${esc(p.nombre)}" data-action="quitar-item" data-id="${e.id}" data-idx="${idx}">×</button></div>`; }).join('')}
+        </div>`;
+      }).join('');
+      const borrando = ui.borrarEstr === e.id;
+      const usos = S.planes.filter(p => p.estrategiaId === e.id).length;
+      return `<article class="tarjeta">
+        <div class="fila">
+          <input class="campo" aria-label="Nombre de la estrategia" id="en-${e.id}" data-estr="nombre" data-id="${e.id}" value="${esc(e.nombre)}">
+          <select class="selector" aria-label="Tipo de semana" id="et-${e.id}" data-estr="tipo" data-id="${e.id}">
+            <option value="con" ${e.tipo === 'con' ? 'selected' : ''}>Con episodio</option>
+            <option value="sin" ${e.tipo === 'sin' ? 'selected' : ''}>Sin episodio</option>
+          </select>
+          <span class="cuenta">${textoCuenta(c)}</span>
+          ${borrando ? `<button class="btn btn--sm btn--peligro" data-action="borrar-estr-si" data-id="${e.id}">Eliminar</button><button class="btn btn--sm" data-action="cancelar">Cancelar</button>`
+            : `<button class="btn btn--sm btn--peligro" data-action="borrar-estr" data-id="${e.id}">Eliminar</button>`}
+        </div>
+        <div class="semana-scroll"><div class="semana">${cols}</div></div>
+        ${probs.length ? `<ul class="problemas">${probs.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+        <div class="fila">
+          <select class="selector" aria-label="Pieza" id="ap-${e.id}">${activas.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('')}</select>
+          <select class="selector" aria-label="Día" id="ad-${e.id}">${OFFSETS.map(o => `<option value="${o}">${DIA_REF[o]} · ${D_LABEL(o)}</option>`).join('')}</select>
+          <button class="btn btn--sm" data-action="anadir-item" data-id="${e.id}">Añadir pieza</button>
+          ${usos ? `<span class="texto-tenue">${usos} plan${usos === 1 ? '' : 'es'} creado${usos === 1 ? '' : 's'} con ella</span>` : ''}
+        </div>
+      </article>`;
+    }).join('');
+    return `<section class="cabecera-vista">
+        <h1 class="titular ancha">Estrategias</h1>
+        <button class="btn" data-action="nueva-estr">Nueva estrategia</button>
+      </section>${tarjetas}`;
+  }
+
+  // ---------- Vista: Piezas ----------
+  function vistaPiezas() {
+    const lista = S.piezas.slice().sort((a, b) => a.archivada - b.archivada).map(p => {
+      const usadaEn = S.estrategias.filter(e => e.items.some(i => i.piezaId === p.id)).map(e => e.nombre.split(' · ')[0]);
+      return `<article class="tarjeta ${p.archivada ? 'tarjeta--archivada' : ''}">
+        <div class="fila">
+          <input class="campo" aria-label="Nombre de la pieza" id="pn-${p.id}" data-pieza="nombre" data-id="${p.id}" value="${esc(p.nombre)}">
+          <select class="selector" aria-label="Formato" id="pf-${p.id}" data-pieza="formato" data-id="${p.id}">
+            <option value="slide" ${p.formato === 'slide' ? 'selected' : ''}>Slide</option>
+            <option value="reel" ${p.formato === 'reel' ? 'selected' : ''}>Reel</option>
+          </select>
+          <label class="check"><input type="checkbox" id="pe-${p.id}" data-pieza="requiereEp" data-id="${p.id}" ${p.requiereEp ? 'checked' : ''}>Necesita episodio</label>
+          <label class="check">Preparar con <input class="campo numero" type="number" min="0" max="14" id="pp-${p.id}" data-pieza="prep" data-id="${p.id}" value="${p.prep}"> días</label>
+          <button class="btn btn--sm ${p.archivada ? '' : 'btn--peligro'}" data-action="archivar" data-id="${p.id}">${p.archivada ? 'Recuperar' : 'Archivar'}</button>
+        </div>
+        <div class="fila">
+          <span class="estrecha">Días</span>
+          <div class="toggles">${OFFSETS.map(o => `<button class="toggle" data-action="dia" data-id="${p.id}" data-v="${o}" aria-pressed="${p.dias.includes(o)}"><span>${DIA_REF[o]}</span></button>`).join('')}</div>
+        </div>
+        <div class="fila">
+          <span class="estrecha">Canales</span>
+          <div class="toggles">${CANALES.map(([v, t]) => `<button class="toggle" data-action="canal" data-id="${p.id}" data-v="${v}" aria-pressed="${p.canales.includes(v)}">${t}</button>`).join('')}</div>
+          ${usadaEn.length ? `<span class="texto-tenue">En ${usadaEn.join(', ')}</span>` : ''}
+        </div>
+      </article>`;
+    }).join('');
+    return `<section class="cabecera-vista">
+        <h1 class="titular ancha">Piezas</h1>
+        <button class="btn" data-action="nueva-pieza">Nueva pieza</button>
+      </section>${lista}`;
+  }
+
+  // ---------- Eventos ----------
+  const cambiar = fn => { fn(); guardar(); render(); };
+  const planPorId = id => S.planes.find(p => p.id === id);
+
+  document.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-action]');
+    if (!b || b.disabled) return;
+    const a = b.dataset.action, id = b.dataset.id, v = b.dataset.v;
+    switch (a) {
+      case 'tab': ui.tab = v; render(); window.scrollTo(0, 0); break;
+      case 'persona': ui.persona = v; render(); break;
+      case 'toggle-nuevo': ui.nuevo = !ui.nuevo; render(); break;
+      case 'np-tipo': ui.np.tipo = v; ui.np.estr = null; render(); break;
+      case 'np-estr': ui.np.estr = v; render(); break;
+      case 'generar': cambiar(() => {
+        const np = ui.np;
+        S.planes.push(crearPlan(S, np.tipo, np.numero.trim(), np.invitado.trim(), np.fecha, np.estr));
+        ui.np = { tipo: 'con', numero: '', invitado: '', fecha: '', estr: null }; ui.nuevo = false;
+      }); break;
+      case 'editar-fecha': ui.editFecha = id; ui.borrarPlan = null; render(); break;
+      case 'aplicar-fecha': {
+        const nueva = document.getElementById('ef-' + id).value;
+        if (!nueva) break;
+        cambiar(() => {
+          const p = planPorId(id); p.ancla = nueva;
+          p.items.forEach(it => { const f = sumar(nueva, it.offset); if (f !== it.fecha && it.estado === 'metricool') it.revisar = true; it.fecha = f; });
+          ui.editFecha = null;
+        }); break;
+      }
+      case 'borrar-plan': ui.borrarPlan = id; ui.editFecha = null; render(); break;
+      case 'borrar-plan-si': cambiar(() => { S.planes = S.planes.filter(p => p.id !== id); ui.borrarPlan = null; }); break;
+      case 'cancelar': ui.editFecha = ui.borrarPlan = ui.borrarEstr = null; render(); break;
+      case 'revisado': cambiar(() => { const it = planPorId(b.dataset.plan).items.find(i => i.id === b.dataset.item); it.revisar = false; }); break;
+      case 'reset': ui.reset = true; render(); break;
+      case 'reset-no': ui.reset = false; render(); break;
+      case 'reset-si': ui.reset = false; S = semilla(); guardar(); render(); break;
+      case 'nueva-estr': cambiar(() => S.estrategias.push({ id: uid(), nombre: 'Nueva estrategia', tipo: 'con', items: [] })); break;
+      case 'borrar-estr': ui.borrarEstr = id; render(); break;
+      case 'borrar-estr-si': cambiar(() => { S.estrategias = S.estrategias.filter(e => e.id !== id); ui.borrarEstr = null; }); break;
+      case 'quitar-item': cambiar(() => S.estrategias.find(e => e.id === id).items.splice(Number(b.dataset.idx), 1)); break;
+      case 'anadir-item': {
+        const piezaId = document.getElementById('ap-' + id).value;
+        const offset = Number(document.getElementById('ad-' + id).value);
+        if (piezaId) cambiar(() => S.estrategias.find(e => e.id === id).items.push({ piezaId, offset }));
+        break;
+      }
+      case 'nueva-pieza': cambiar(() => S.piezas.push({ id: uid(), nombre: 'Nueva pieza', formato: 'slide', requiereEp: false, dias: TODOS.slice(), prep: 2, canales: ['ig'], archivada: false })); break;
+      case 'archivar': cambiar(() => { const p = pieza(S, id); p.archivada = !p.archivada; }); break;
+      case 'dia': cambiar(() => { const p = pieza(S, id); const o = Number(v); p.dias = p.dias.includes(o) ? p.dias.filter(x => x !== o) : p.dias.concat(o).sort((x, y) => x - y); }); break;
+      case 'canal': cambiar(() => { const p = pieza(S, id); p.canales = p.canales.includes(v) ? p.canales.filter(x => x !== v) : p.canales.concat(v); }); break;
+    }
+  });
+
+  // Texto libre: se guarda al escribir, sin repintar, para no perder el foco.
+  document.addEventListener('input', ev => {
+    const t = ev.target;
+    if (t.dataset.np && t.type !== 'date') { ui.np[t.dataset.np] = t.value; const g = app.querySelector('[data-action="generar"]'); if (g) g.disabled = !(ui.np.fecha && ui.np.estr && (ui.np.tipo === 'sin' || ui.np.numero.trim())); }
+    if (t.dataset.estr === 'nombre') { S.estrategias.find(e => e.id === t.dataset.id).nombre = t.value; guardar(); }
+    if (t.dataset.pieza === 'nombre') { pieza(S, t.dataset.id).nombre = t.value; guardar(); }
+  });
+
+  document.addEventListener('change', ev => {
+    const t = ev.target;
+    if (t.dataset.np === 'fecha') { ui.np.fecha = t.value; render(); return; }
+    if (t.dataset.campo) { cambiar(() => { planPorId(t.dataset.plan).items.find(i => i.id === t.dataset.item)[t.dataset.campo] = t.value; }); return; }
+    if (t.dataset.estr === 'tipo') { cambiar(() => { S.estrategias.find(e => e.id === t.dataset.id).tipo = t.value; }); return; }
+    if (t.dataset.estr === 'nombre' || t.dataset.pieza === 'nombre') { render(); return; }
+    if (t.dataset.pieza) {
+      cambiar(() => {
+        const p = pieza(S, t.dataset.id);
+        if (t.dataset.pieza === 'requiereEp') p.requiereEp = t.checked;
+        else if (t.dataset.pieza === 'prep') p.prep = Math.max(0, Math.min(14, Number(t.value) || 0));
+        else p[t.dataset.pieza] = t.value;
+      });
+    }
+  });
+
+  render();
+})();
+</script>
+
+</body>
+</html>
