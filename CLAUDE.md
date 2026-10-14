@@ -1,19 +1,26 @@
 # Horizon App — instrucciones para Claude
 
 Herramienta interna de Horizon Sport para planificar el contenido de redes alrededor de cada
-episodio. Repo **privado**. Dominio previsto: `app.horizonsport.co`. Solo español.
+episodio. Dominio previsto: `app.horizonsport.co`. Solo español.
+
+Repo **público** (https://github.com/RodzCantCode/horizon-app), a propósito: el plan gratuito de
+Vercel pone trabas con repos privados (decidido el 14-oct-2026). Por eso aquí no entran claves,
+contraseñas ni datos reales de planes o personas: los datos viven en Supabase y las claves en
+variables de entorno.
 
 La web pública es otro proyecto (`horizon-web`, repo público). **Nada de este repo se copia allí.**
 
 ## Proyecto hermano: horizon-web
 
 - Repo: https://github.com/RodzCantCode/horizon-web (público). Carpeta local junto a esta:
-  `../horizon-web`.
+  `../horizon-web` (en el Mac de Mario, las dos dentro de una carpeta `HorizonSport` sin repo).
+- **Al empezar una sesión, lee `../horizon-web/docs/ESTADO.md`** y avisa de cualquier cambio de la
+  web que afecte a la app (diseño, dominios, Vercel, contenido del podcast) aunque no se haya pedido.
+  Si la carpeta no está, léelo en GitHub y dilo.
 - De allí se toma el sistema visual ([docs/DISENO.md](https://github.com/RodzCantCode/horizon-web/blob/main/docs/DISENO.md))
   y el contexto general del podcast (`CLAUDE.md` y `docs/ESTADO.md`). Se lee, no se duplica aquí.
-- Para trabajar con los dos a la vez, abre la sesión en esta carpeta y añade `../horizon-web` como
-  carpeta adicional. Lo que se cambie allí sigue sus propias reglas (repo público, push a `main` =
-  producción).
+- La conexión va en un solo sentido: la app lee la web; la web no sabe nada de la app. Lo que se
+  cambie en la web sigue sus propias reglas (repo público, push a `main` = producción).
 
 ## Con quién trabajas
 
@@ -53,6 +60,10 @@ Reglas que no se negocian:
 
 9-oct-2026: `index.html` es el **prototipo** (HTML estático, datos en `localStorage` del navegador de
 cada uno). Sirve para validar el flujo con 2–3 episodios reales. Todavía no es compartido.
+
+14-oct-2026: creados el repo de GitHub y el proyecto de Supabase («Horizon Sport - App», organización
+«Horizon Sport», plan gratuito, Europa). Supabase pausa los proyectos gratuitos tras una semana sin
+uso: se reactivan desde el panel sin perder datos.
 
 Siguiente paso previsto: datos compartidos y login con **Supabase** (Auth con los 3 usuarios creados
 a mano, registro público desactivado y RLS en todas las tablas). No se programa un login propio.
