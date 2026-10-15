@@ -56,6 +56,19 @@ Reglas que no se negocian:
 - El día de referencia (D) es el día de publicación del episodio; hoy suele ser viernes, pero no se
   da por hecho en el código.
 
+## Supabase desde Claude
+
+- La conexión va **por proyecto**: `.mcp.json` define `supabase-horizon`, que apunta solo al
+  proyecto de Horizon (`project_ref=xxtwmhzdkrmyhjmzoxck`, no es secreto). Hoy la cuenta de Supabase es la personal de
+  Mario, con varias organizaciones (PHSPORT, Horizon Sport…): en cada equipo se inicia sesión una vez
+  desde `/mcp` → `supabase-horizon` y, al autorizar, se elige la organización **Horizon Sport**. Si un día Horizon pasa a
+  su propia cuenta, solo cambia ese inicio de sesión.
+- Las conexiones generales de Supabase (el plugin y el conector de claude.ai) están autorizadas para
+  **PHSPORT**. En este equipo están bloqueadas en `.claude/settings.local.json` (fuera del repo); en
+  otro equipo, no uses una herramienta de Supabase que no sea la de `.mcp.json`. Mirar otra base de
+  datos desde aquí solo si Mario lo pide expresamente.
+- Sin CLI de Supabase por ahora (decidido el 14-oct-2026).
+
 ## Estado
 
 9-oct-2026: `index.html` es el **prototipo** (HTML estático, datos en `localStorage` del navegador de
