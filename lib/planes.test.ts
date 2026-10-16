@@ -270,6 +270,15 @@ describe('proponerNumero', () => {
     expect(proponerNumero([{ ...plan, numero: null }, { ...plan, numero: 'piloto' }])).toBe(null);
   });
 
+  it('solo cuenta los planes con episodio', () => {
+    const planes = [
+      { ...plan, conEpisodio: false, numero: '07' },
+      { ...plan, conEpisodio: true, numero: '05' },
+    ];
+    expect(proponerNumero(planes)).toBe('06');
+    expect(proponerNumero([{ ...plan, conEpisodio: false, numero: '07' }])).toBe(null);
+  });
+
   it('devuelve null si no hay planes', () => {
     expect(proponerNumero([])).toBe(null);
   });

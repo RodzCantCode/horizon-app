@@ -105,14 +105,14 @@ export function diaPermitido(pieza: Pieza, desplazamiento: number): boolean {
 }
 
 /**
- * Número del próximo episodio: el mayor número de los planes más uno, con al menos dos cifras
- * («05» → «06», «99» → «100»). Ignora los planes sin número o con uno que no es numérico. Sin
- * ninguno, `null`: la persona lo escribe.
+ * Número del próximo episodio: el mayor número de los planes con episodio más uno, con al menos dos
+ * cifras («05» → «06», «99» → «100»). Ignora los planes sin episodio y los que no tienen número o lo
+ * tienen no numérico. Sin ninguno, `null`: la persona lo escribe.
  */
 export function proponerNumero(planes: Plan[]): string | null {
   let mayor: number | null = null;
-  for (const { numero } of planes) {
-    if (numero === null || !/^\d+$/.test(numero)) continue;
+  for (const { conEpisodio, numero } of planes) {
+    if (!conEpisodio || numero === null || !/^\d+$/.test(numero)) continue;
     const valor = Number.parseInt(numero, 10);
     if (mayor === null || valor > mayor) mayor = valor;
   }
