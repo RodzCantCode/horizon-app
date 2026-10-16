@@ -3,7 +3,11 @@
 Herramienta interna de Horizon Sport para planificar el contenido de redes de cada episodio.
 Repo público. Previsto en `app.horizonsport.co`.
 
-De momento es un prototipo estático: abre `index.html` en el navegador. Los datos se guardan en el
-navegador de cada uno.
+App de Next.js con login de Supabase. Para arrancarla en local (Node 22): `npm install`, copia
+`.env.example` como `.env.local` y rellénalo, y `npm run dev`. De momento solo tiene la pantalla de
+entrar y una portada vacía.
 
-Contexto, modelo y reglas: [CLAUDE.md](CLAUDE.md).
+El prototipo estático de octubre está en `prototipo/index.html`: ábrelo en el navegador. Guarda los
+datos en el navegador de cada uno.
+
+Contexto, modelo, reglas y comandos: [CLAUDE.md](CLAUDE.md).

@@ -32,12 +32,13 @@ Los tres usan la app.
 Hoy el calendario de contenido vive en la cabeza de cada uno. La app tiene que permitir que
 cualquiera de los tres responda en menos de 30 segundos, sin preguntar a nadie:
 
-1. Qué se publica esta semana y qué día.
-2. Quién lo prepara.
-3. En qué estado está (por hacer, en diseño, listo, programado en Metricool).
+1. Qué se publica esta semana y los próximos días, con fecha y hora.
+2. Qué falta por programar en Metricool.
+3. Qué semanas que vienen siguen sin planificar.
 
-**Metricool manda.** La app planifica qué y cómo se publica; la programación real y las horas viven
-en Metricool. La app no publica en redes.
+No hay responsables: van los tres a una, y el registro guarda quién hizo qué. Ahora la app es solo
+calendario; más adelante se conectará con Metricool, que seguirá siendo lo que publica. La app no
+publica en redes. **Pantallas, estados, horas y datos: [docs/diseno.md](docs/diseno.md).**
 
 ## Modelo
 
@@ -45,16 +46,26 @@ en Metricool. La app no publica en redes.
 | --- | --- |
 | Pieza | Tipo de contenido (T0–T4, clip principal, clip secundario, teaser, clip de archivo): formato (Slide o Reel), si necesita episodio, días permitidos respecto al episodio, días de preparación y canales |
 | Estrategia | Combinación de piezas en días concretos (D-1 a D+5), para semana con o sin episodio |
-| Plan | Episodio (o semana sin episodio) + estrategia elegida. Al generarse guarda una **copia fija** de las piezas con su fecha real, responsable y estado |
+| Plan | Episodio (o semana sin episodio) + estrategia elegida. Al generarse guarda una **copia fija** de las piezas con su fecha y hora reales y su estado (pendiente o programada) |
 
 Reglas que no se negocian:
 
 - Editar una estrategia o una pieza **no cambia** los planes ya generados.
 - Las piezas se **archivan**, no se borran. Una estrategia que usa una pieza archivada deja de ofrecerse.
-- Al mover la fecha de un plan, las piezas que ya estaban en Metricool se marcan para revisar.
-- Solo fechas, sin horas (el cambio de hora no debe mover nada; las horas están en Metricool).
+- Al mover de fecha u hora un plan o una pieza, las que ya estaban programadas se marcan para revisar.
+- Fecha y hora de reloj en **hora de España** (`Europe/Madrid`), guardadas por separado; nunca una
+  hora fija en UTC. El cambio de horario no mueve nada (decidido el 16-oct-2026; antes eran solo
+  fechas).
 - El día de referencia (D) es el día de publicación del episodio; hoy suele ser viernes, pero no se
   da por hecho en el código.
+
+## Stack (decidido el 15-oct-2026)
+
+**Next.js + Supabase (base de datos y login) + Mochi, publicado en Vercel.** Es el mismo stack que
+`phsport-app`, otra herramienta interna de Mario con usuarios, calendario y estados: lo resuelto allí
+(login con `@supabase/ssr`, RLS, pruebas) se reutiliza en vez de aprenderse de nuevo. Mochi es de
+React y da el aspecto de la web casi gratis. Se descartó Astro (el de la web): encaja con webs de
+contenido, no con una app con login y datos que cambian.
 
 ## Supabase desde Claude
 
@@ -78,14 +89,73 @@ cada uno). Sirve para validar el flujo con 2–3 episodios reales. Todavía no e
 «Horizon Sport», plan gratuito, Europa). Supabase pausa los proyectos gratuitos tras una semana sin
 uso: se reactivan desde el panel sin perder datos.
 
-Siguiente paso previsto: datos compartidos y login con **Supabase** (Auth con los 3 usuarios creados
-a mano, registro público desactivado y RLS en todas las tablas). No se programa un login propio.
+15-oct-2026: proyecto de Vercel `horizon-app` (equipo `Rodz`, plan Hobby) enlazado al repo. Cada push
+a `main` publica solo; hoy publica el prototipo, que no guarda nada fuera del navegador.
+
+15-oct-2026: probado el prototipo. El flujo (piezas → estrategias → plan) funciona, pero la
+navegación entre menús y pestañas confunde. La app de Next.js **empieza de cero en diseño**: el
+prototipo queda como referencia del modelo, no de la interfaz.
+
+15-oct-2026: **esqueleto de la app de Next.js** en la raíz del repo, sin commit todavía. El
+prototipo pasa a `prototipo/index.html` (no se sirve; se abre a mano en el navegador). Hay login con
+Supabase Auth (correo y contraseña, sin registro) y una portada protegida casi vacía con el correo y
+«Salir». Sin tablas todavía. Probado en local sin usuarios: `/` manda a `/entrar` y `/entrar` carga;
+el inicio de sesión real no se ha probado. Falta, a mano: crear los 3 usuarios en Supabase
+(Authentication → Users), desactivar el registro público, poner las dos variables de `.env.example`
+en el proyecto de Vercel y comprobar que su Framework Preset es Next.js (se creó cuando el repo era
+HTML estático).
+
+Siguiente paso previsto: datos compartidos en **Supabase** (RLS en todas las tablas). No se programa un
+login propio.
 
 ## Diseño
 
 Mismo sistema visual que la web (ver `docs/DISENO.md` en `horizon-web`, enlazado arriba): fondo tinta, una sola
 familia (Archivo) con el contraste en la anchura, azul `#169EFF` solo en la acción principal, sin
 textos de ayuda tipo tooltip. Debe funcionar bien en el móvil.
+
+- Los tokens (colores, fuente) son los de la web, con los mismos nombres, en `app/global.css`. Solo
+  está lo que la app usa; si hace falta algo más, se copia de la web con su nombre.
+- **Botones y campos, siempre de Mochi** (`mochi-ui`), con la paleta de Horizon redefiniendo sus
+  variables `--mochi-*` en `app/global.css` (misma tabla que la web). Azul sólido (`variant="accent"`)
+  solo en la acción principal de cada pantalla; el resto, `surface`.
+- Mochi se instala **fijando una etiqueta** de https://github.com/RodzCantCode/mochi, igual que en la
+  web: aquí la `v0.3.1` (la web sigue en la 0.3.0). Para subir: `npm install
+  github:RodzCantCode/mochi#vX.Y.Z` y revisar botones y campos en escritorio y móvil.
+- En Next.js los botones de Mochi se hidratan y miden su ancho con JavaScript (estilo en línea), así
+  que una clase con `width: 100%` no los ensancha. Van con su ancho natural.
+- Fuente: Archivo desde `next/font/google` con el eje `wdth` (`app/layout.tsx`).
+
+## Comandos
+
+Node 22 (`.nvmrc`; en Vercel lo fija `engines` de `package.json`).
+
+| Comando | Qué hace |
+| --- | --- |
+| `npm install` | Dependencias. Descarga y compila Mochi desde GitHub, así que necesita conexión |
+| `npm run dev` | Servidor de desarrollo en http://localhost:3000 |
+| `npm run build` | Compilación de producción (la misma que hace Vercel) |
+| `npm run lint` | ESLint |
+
+Antes de `npm run dev`, copia `.env.example` como `.env.local` y rellénalo (URL del proyecto y clave
+publicable; las dos son públicas por diseño). `.env.local` no se sube. La clave secreta
+(`service_role`) no se usa en la app.
+
+## Mapa
+
+| Ruta | Qué es |
+| --- | --- |
+| `app/layout.tsx` | Raíz: fuente, estilos de Mochi y tema oscuro |
+| `app/global.css` | Tokens de Horizon y variables de Mochi |
+| `app/page.tsx` | `/`, protegida: correo del usuario y «Salir» (`app/acciones.ts`) |
+| `app/entrar/` | `/entrar`: correo y contraseña. Sin registro: las cuentas se crean a mano en Supabase |
+| `proxy.ts` | Corre antes de cada ruta (en Next.js 16 el `middleware` se llama `proxy`): refresca la sesión y manda a `/entrar` a quien no la tenga |
+| `lib/supabase/` | Clientes de Supabase con `@supabase/ssr`: `navegador.ts`, `servidor.ts` y `sesion.ts` (el del proxy) |
+| `prototipo/index.html` | Prototipo de octubre: referencia del modelo, no de la interfaz. No se sirve |
+| `AGENTS.md` | Lo escribe `next dev`: avisa a los agentes de que lean la documentación de Next que viene en `node_modules/next/dist/docs/`. No se edita a mano |
+
+Next.js 16 con Cache Components activado (`next.config.ts`, lo que trae `create-next-app`): lo que
+lee la petición (cookies, sesión) va dentro de `<Suspense>`, como `Sesion` en `app/page.tsx`.
 
 ## Convenciones
 

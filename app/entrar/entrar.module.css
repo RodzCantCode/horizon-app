@@ -1,0 +1,33 @@
+/* Móvil primero: una columna con el logo arriba y el formulario asentado en el centro. */
+.pagina {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1.25rem, 4vw, 2rem) var(--margen);
+}
+
+.bloque {
+  width: 100%;
+  max-width: 26rem;
+  margin: auto;
+  padding-block: 3rem;
+}
+
+.titular {
+  font-size: clamp(2.4rem, 9vw, 3.5rem);
+  margin-bottom: 2rem;
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+/* El hueco del mensaje existe siempre (vacío si no hay error) para que el botón no salte. */
+.error {
+  min-height: 1.4em;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--mochi-danger-strong);
+}
