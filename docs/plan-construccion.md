@@ -429,3 +429,5 @@ expect(v[1].dias[4].piezas.map((p) => p.hora)).toEqual(['18:00']);
   `README.md`; marcar en [diseno.md](diseno.md) lo que haya cambiado al construir.
 - [ ] **Paso 4:** subir `app-v1`, comprobar la vista previa de Vercel con un usuario real, y pedir a
   Mario el OK para juntarla con `main` (producción).
+- [ ] **Paso 5:** antes de usarla con datos reales, montar una copia periódica de los datos fuera de
+  Supabase (el plan gratuito no da copias que Mario pueda restaurar). Se diseña con Mario.

@@ -79,6 +79,11 @@ contenido, no con una app con login y datos que cambian.
   otro equipo, no uses una herramienta de Supabase que no sea la de `.mcp.json`. Mirar otra base de
   datos desde aquí solo si Mario lo pide expresamente.
 - Sin CLI de Supabase por ahora (decidido el 14-oct-2026).
+- `skip_elicitations=execute_sql,apply_migration` en `.mcp.json`: la confirmación propia de Supabase
+  no llega a mostrarse en la app de escritorio y se rechaza sola, así que solo queda el permiso de
+  Claude (decidido el 17-oct-2026, como en phsport-app). A cambio, **nada que borre en bloque**
+  (`drop`, `truncate`, `delete` o `update` sin `where` que acote filas concretas) sin el OK expreso
+  de Mario en el chat, aunque técnicamente se pueda. Las pruebas van en `begin … rollback`.
 
 ## Estado
 
