@@ -1,12 +1,13 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { clavePublicableSupabase, urlSupabase } from './entorno';
+import type { Database } from './tipos';
 
 // Cliente para componentes de servidor, acciones de servidor y route handlers.
 export async function crearClienteServidor() {
   const almacenCookies = await cookies();
 
-  return createServerClient(urlSupabase, clavePublicableSupabase, {
+  return createServerClient<Database>(urlSupabase, clavePublicableSupabase, {
     cookies: {
       getAll() {
         return almacenCookies.getAll();

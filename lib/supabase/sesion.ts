@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { clavePublicableSupabase, urlSupabase } from './entorno';
+import type { Database } from './tipos';
 
 export const rutaEntrar = '/entrar';
 
@@ -11,7 +12,7 @@ export async function actualizarSesion(peticion: NextRequest) {
   let respuesta = NextResponse.next({ request: peticion });
   let cabecerasSupabase: Record<string, string> = {};
 
-  const supabase = createServerClient(urlSupabase, clavePublicableSupabase, {
+  const supabase = createServerClient<Database>(urlSupabase, clavePublicableSupabase, {
     cookies: {
       getAll() {
         return peticion.cookies.getAll();
