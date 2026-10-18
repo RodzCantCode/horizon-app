@@ -60,8 +60,10 @@ pantalla principal; fuera del modo edición solo se cambia el estado de una piez
   a la estrategia ni a la pieza de origen.
 - **Panel desfasado.** Si otra persona cambia algo con el panel abierto, al guardar no se pisa su
   cambio: si la pieza ya no está en el día y la hora que enseñaba el panel, o la semana tiene otro
-  día D, no se guarda, se avisa («La pieza ha cambiado…», «La semana ha cambiado…», con «Revisa y
-  vuelve a guardar») y el panel se pone al día. Si la pieza o el plan ya no existen, lo dice.
+  día D, no se guarda. El panel sale del modo edición y enseña los datos nuevos con el aviso («La
+  pieza ha cambiado…», «La semana ha cambiado…», con «Revisa y vuelve a guardar»); para volver a
+  intentarlo se entra otra vez con el lápiz, ya con esos datos. Si la pieza o el plan ya no existen,
+  lo dice.
 
 ### Planificar
 

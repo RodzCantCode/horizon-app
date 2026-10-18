@@ -4,6 +4,7 @@ import {
   construirSemanas,
   datosPlan,
   diasDelPlan,
+  esAvisoDeDesfase,
   estadoDePieza,
   etiquetaDia,
   etiquetaSemana,
@@ -354,5 +355,23 @@ describe('diasDelPlan', () => {
       { fecha: '2026-10-27', etiqueta: 'Martes 27 oct · D+4' },
       { fecha: '2026-10-28', etiqueta: 'Miércoles 28 oct · D+5' },
     ]);
+  });
+});
+
+describe('esAvisoDeDesfase', () => {
+  it('reconoce los avisos de que la pieza o la semana han cambiado con el panel abierto', () => {
+    expect(esAvisoDeDesfase('La pieza ha cambiado mientras la editabas. Revisa y vuelve a guardar.')).toBe(true);
+    expect(esAvisoDeDesfase('La semana ha cambiado mientras la editabas. Revisa y vuelve a guardar.')).toBe(true);
+  });
+
+  it('los demás errores no sacan del modo edición', () => {
+    for (const error of [
+      'Esa pieza ya no está en el plan',
+      'El día tiene que estar entre D-1 y D+5',
+      'Esa hora no es válida',
+      'No se ha podido guardar. Vuelve a intentarlo.',
+    ]) {
+      expect(esAvisoDeDesfase(error)).toBe(false);
+    }
   });
 });

@@ -6,7 +6,15 @@ import { useSearchParams } from 'next/navigation';
 import { Button, PencilIcon, RadioGroup, Select, TextField } from 'mochi-ui';
 import { esFecha, existeEnMadrid, lunesDe, normalizarHora } from '@/lib/fechas';
 import { estrategiasParaPlanificar } from '@/lib/planes';
-import { diasDelPlan, etiquetaDia, fechaLarga, pasaALaSemana, rangoSemanas, tituloSemana } from '@/lib/semanas';
+import {
+  diasDelPlan,
+  esAvisoDeDesfase,
+  etiquetaDia,
+  fechaLarga,
+  pasaALaSemana,
+  rangoSemanas,
+  tituloSemana,
+} from '@/lib/semanas';
 import type { Estrategia, Pieza, PiezaDePlan, Plan } from '@/lib/tipos';
 import { BotonesGuardar, useEnvio } from '../componentes/edicion';
 import { Panel, useFocoAlCambiarDeVista, useMientrasSeCierra } from '../componentes/Panel';
@@ -103,13 +111,24 @@ function ContenidoSemana({
   alMoverAOtraSemana: (nuevoLunes: string) => void;
 }) {
   const [vista, setVista] = useState<Vista>('ver');
+  // El aviso de panel desfasado con que se vuelve de añadir una pieza suelta (AnadirPieza).
+  const [aviso, setAviso] = useState<string | null>(null);
   const contenedor = useRef<HTMLDivElement>(null);
   useFocoAlCambiarDeVista(vista, contenedor);
-  const volver = () => setVista('ver');
+  const volver = () => {
+    setAviso(null);
+    setVista('ver');
+  };
+  const verConAviso = (texto: string) => {
+    setAviso(texto);
+    setVista('ver');
+  };
 
   return (
     <div ref={contenedor} className={estilos.vista}>
-      {vista === 'ver' && <DatosSemana datos={datos} hoy={hoy} alEditar={() => setVista('editar')} />}
+      {vista === 'ver' && (
+        <DatosSemana datos={datos} hoy={hoy} aviso={aviso} alEditar={() => setVista('editar')} />
+      )}
       {vista === 'editar' && <EditarSemana plan={datos.plan} alElegir={setVista} alTerminar={volver} />}
       {vista === 'mover' && (
         <MoverSemana
@@ -121,19 +140,25 @@ function ContenidoSemana({
         />
       )}
       {vista === 'estrategia' && <CambiarEstrategia datos={datos} alTerminar={volver} />}
-      {vista === 'anadir' && <AnadirPieza datos={datos} alTerminar={volver} />}
+      {vista === 'anadir' && <AnadirPieza datos={datos} alTerminar={volver} alDesfasarse={verConAviso} />}
     </div>
   );
 }
 
-/** La semana tal cual: datos del episodio, estrategia y piezas. El lápiz pasa a editar. */
+/**
+ * La semana tal cual: datos del episodio, estrategia y piezas. El lápiz pasa a editar. Con `aviso`
+ * (se vuelve aquí porque otra persona ha movido la semana mientras se añadía una pieza), lo enseña
+ * debajo de los datos.
+ */
 function DatosSemana({
   datos: { plan, piezasDelPlan },
   hoy,
+  aviso,
   alEditar,
 }: {
   datos: DatosDeSemana;
   hoy: string;
+  aviso: string | null;
   alEditar: () => void;
 }) {
   const idPiezas = useId();
@@ -165,6 +190,12 @@ function DatosSemana({
           <PencilIcon size={18} />
         </Button>
       </div>
+
+      {aviso && (
+        <p className={estilos.errorPieza} role="alert">
+          {aviso}
+        </p>
+      )}
 
       <section className={estilos.registro} aria-labelledby={idPiezas}>
         <h3 id={idPiezas} className={estilos.tituloRegistro}>
@@ -404,8 +435,18 @@ function CambiarEstrategia({ datos, alTerminar }: { datos: DatosDeSemana; alTerm
  * **Añadir una pieza suelta**: una pieza que no esté archivada, el día (de D-1 a D+5) y la hora, que
  * empieza siendo la habitual de la pieza y cambia con ella. Avisa, como al planificar, si la hora no
  * existe en España ese día. La pieza se copia en el servidor desde la base; la de origen no cambia.
+ * Si otra persona ha movido la semana entretanto, no se añade y se vuelve a ver la semana con el
+ * aviso (`alDesfasarse`): al volver aquí, los días salen ya del día D nuevo.
  */
-function AnadirPieza({ datos, alTerminar }: { datos: DatosDeSemana; alTerminar: () => void }) {
+function AnadirPieza({
+  datos,
+  alTerminar,
+  alDesfasarse,
+}: {
+  datos: DatosDeSemana;
+  alTerminar: () => void;
+  alDesfasarse: (aviso: string) => void;
+}) {
   const { plan } = datos;
   const disponibles = datos.piezas.filter((p) => !p.archivada);
   const [piezaId, setPiezaId] = useState(disponibles[0]?.id ?? '');
@@ -424,7 +465,11 @@ function AnadirPieza({ datos, alTerminar }: { datos: DatosDeSemana; alTerminar: 
   function guardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     // Con el día D del panel: si la semana se ha movido entretanto, el servidor no la añade.
-    enviar(() => anadirPiezaSuelta(plan.id, piezaId, fecha, hora, plan.diaD), alTerminar);
+    enviar(() => anadirPiezaSuelta(plan.id, piezaId, fecha, hora, plan.diaD), alTerminar, (aviso) => {
+      if (!esAvisoDeDesfase(aviso)) return false;
+      alDesfasarse(aviso);
+      return true;
+    });
   }
 
   if (disponibles.length === 0) {

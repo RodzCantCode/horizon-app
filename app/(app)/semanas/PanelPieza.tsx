@@ -8,6 +8,7 @@ import {
   avisoDePieza,
   datosPlan,
   diasDelPlan,
+  esAvisoDeDesfase,
   estadoDePieza,
   fechaLarga,
   fechaYPosicion,
@@ -82,7 +83,12 @@ export function PanelPieza({ id, detalle, hoy }: { id: string; detalle: DetalleD
   );
 }
 
-/** Ver o editar: el lápiz pasa a editar; **Guardar** y **Cancelar** vuelven a ver. */
+/**
+ * Ver o editar: el lápiz pasa a editar; **Guardar** y **Cancelar** vuelven a ver. Si al guardar
+ * resulta que otra persona ha cambiado la pieza (`esAvisoDeDesfase`), también se vuelve a ver, con el
+ * aviso: la vista enseña los datos nuevos y, para volver a intentarlo, se entra otra vez con el lápiz,
+ * ya con ellos. Seguir editando dejaría un segundo **Guardar** con los valores viejos.
+ */
 function ContenidoPieza({
   detalle,
   hoy,
@@ -93,15 +99,31 @@ function ContenidoPieza({
   alQuitar: () => void;
 }) {
   const [editando, setEditando] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
   const vista = useRef<HTMLDivElement>(null);
   useFocoAlCambiarDeVista(editando ? 'editar' : 'ver', vista);
+
+  function editar() {
+    setAviso(null);
+    setEditando(true);
+  }
+
+  function verConAviso(texto: string) {
+    setAviso(texto);
+    setEditando(false);
+  }
 
   return (
     <div ref={vista} className={estilos.vista}>
       {editando ? (
-        <EditarPieza detalle={detalle} alTerminar={() => setEditando(false)} alQuitar={alQuitar} />
+        <EditarPieza
+          detalle={detalle}
+          alTerminar={() => setEditando(false)}
+          alDesfasarse={verConAviso}
+          alQuitar={alQuitar}
+        />
       ) : (
-        <DatosPieza detalle={detalle} hoy={hoy} alEditar={() => setEditando(true)} />
+        <DatosPieza detalle={detalle} hoy={hoy} aviso={aviso} alEditar={editar} />
       )}
     </div>
   );
@@ -110,14 +132,17 @@ function ContenidoPieza({
 function DatosPieza({
   detalle: { pieza, plan, registro },
   hoy,
+  aviso,
   alEditar,
 }: {
   detalle: DetalleDePieza;
   hoy: string;
+  /** El de panel desfasado con que se vuelve de editar; se enseña donde los errores, hasta otro cambio. */
+  aviso: string | null;
   alEditar: () => void;
 }) {
   const [enviando, iniciar] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(aviso);
   const idRegistro = useId();
   const programada = pieza.estado === 'programada';
 
@@ -200,17 +225,20 @@ function DatosPieza({
  * (azul); lo demás, superficie. **Quitar de este plan** pregunta antes en una fila del propio panel.
  *
  * El servidor vuelve a comprobarlo todo y, si estaba programada y cambia, la deja para revisar en
- * Metricool; si otra persona la ha movido con el panel abierto, no guarda y lo dice. Las acciones
- * refrescan la página al terminar: el botón sigue cargando hasta que llega la pieza nueva y entonces
- * se vuelve a ver (o, al quitarla, se cierra el panel).
+ * Metricool; si otra persona la ha movido con el panel abierto, no guarda y se vuelve a ver la pieza
+ * con el aviso (`alDesfasarse`). Las acciones refrescan la página al terminar: el botón sigue
+ * cargando hasta que llega la pieza nueva y entonces se vuelve a ver (o, al quitarla, se cierra el
+ * panel).
  */
 function EditarPieza({
   detalle: { pieza, plan },
   alTerminar,
+  alDesfasarse,
   alQuitar,
 }: {
   detalle: DetalleDePieza;
   alTerminar: () => void;
+  alDesfasarse: (aviso: string) => void;
   alQuitar: () => void;
 }) {
   const [fecha, setFecha] = useState(pieza.fecha);
@@ -231,8 +259,9 @@ function EditarPieza({
         const resultado = await editarPiezaDePlan(pieza.id, fecha, hora, { fecha: pieza.fecha, hora: pieza.hora });
         // Dentro de la transición, para volver a ver a la vez que llega la pieza nueva.
         startTransition(() => {
-          if (resultado.error) setError(resultado.error);
-          else alTerminar();
+          if (resultado.error === undefined) alTerminar();
+          else if (esAvisoDeDesfase(resultado.error)) alDesfasarse(resultado.error);
+          else setError(resultado.error);
         });
       } catch {
         setError(SIN_CONEXION);

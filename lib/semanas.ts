@@ -246,6 +246,21 @@ export function pasaALaSemana(lunes: string, hoy: string): string {
   return `Pasa a la semana ${delLunesAlDomingo(lunes)}${conAnio ? ` de ${anioDelDomingo}` : ''}`;
 }
 
+// --- Panel desfasado ------------------------------------------------
+
+/** Lo que dicen las acciones si otra persona ha cambiado la pieza o la semana con el panel abierto. */
+export const AVISO_PIEZA_CAMBIADA = 'La pieza ha cambiado mientras la editabas. Revisa y vuelve a guardar.';
+export const AVISO_SEMANA_CAMBIADA = 'La semana ha cambiado mientras la editabas. Revisa y vuelve a guardar.';
+
+/**
+ * Si el error de una acción dice que el panel se ha quedado desfasado. Entonces el panel sale del
+ * modo edición y enseña el aviso con los datos nuevos: si siguiera editando, un segundo **Guardar**
+ * mandaría los valores viejos y desharía el cambio de la otra persona.
+ */
+export function esAvisoDeDesfase(error: string): boolean {
+  return error === AVISO_PIEZA_CAMBIADA || error === AVISO_SEMANA_CAMBIADA;
+}
+
 /**
  * Los días en que puede ir una pieza de un plan, de D-1 a D+5, para elegirlos en un panel:
  * «Jueves 22 oct · D-1».

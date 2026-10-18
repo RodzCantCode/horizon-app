@@ -11,7 +11,7 @@ import {
   generarPiezasDePlan,
   moverPiezaDePlan,
 } from '@/lib/planes';
-import { rangoSemanas } from '@/lib/semanas';
+import { AVISO_PIEZA_CAMBIADA, AVISO_SEMANA_CAMBIADA, rangoSemanas } from '@/lib/semanas';
 import { crearClienteServidor } from '@/lib/supabase/servidor';
 import type { Estado, Estrategia, NuevaPiezaDePlan } from '@/lib/tipos';
 
@@ -20,6 +20,8 @@ import type { Estado, Estrategia, NuevaPiezaDePlan } from '@/lib/tipos';
 // Los permisos los pone RLS: sin sesión, la base no deja escribir y la acción devuelve el error.
 // Lo que llega del navegador se vuelve a comprobar aquí, y lo que hace falta saber del plan (su día
 // D, si tiene episodio, sus piezas) se lee de la base, no del panel.
+// Los avisos de panel desfasado (AVISO_*) viven en lib/semanas.ts: los paneles los reconocen
+// (esAvisoDeDesfase) para salir del modo edición.
 
 const PIEZA_QUITADA = 'Esa pieza ya no está en el plan';
 const PLAN_NO_EXISTE = 'Ese plan ya no existe';
@@ -34,8 +36,6 @@ const SIN_EPISODIO = 'Esa semana no tiene episodio';
 const ESTRATEGIA_NO_DISPONIBLE = 'Esa estrategia ya no está disponible';
 const PIEZA_NO_DISPONIBLE = 'Esa pieza ya no está disponible';
 const SEMANA_CON_PLAN = 'Esa semana ya tiene plan';
-const PIEZA_CAMBIADA = 'La pieza ha cambiado mientras la editabas. Revisa y vuelve a guardar.';
-const SEMANA_CAMBIADA = 'La semana ha cambiado mientras la editabas. Revisa y vuelve a guardar.';
 const FUERA_DE_LA_PORTADA = 'Solo se puede mover dentro de las semanas que se ven en la portada.';
 
 /**
@@ -220,7 +220,7 @@ export async function editarPiezaDePlan(
   }
   if (leida.pieza.fecha !== original.fecha || leida.pieza.hora !== original.hora) {
     refresh();
-    return { error: PIEZA_CAMBIADA };
+    return { error: AVISO_PIEZA_CAMBIADA };
   }
   const desplazamiento = desplazamientoEnElPlan(leida.plan.diaD, fecha);
   if (desplazamiento === null) {
@@ -249,7 +249,7 @@ export async function editarPiezaDePlan(
 
   refresh();
   // Ninguna fila: entre la lectura y el cambio, otra persona la ha movido, marcado o quitado.
-  if (data.length === 0) return { error: PIEZA_CAMBIADA };
+  if (data.length === 0) return { error: AVISO_PIEZA_CAMBIADA };
   return {};
 }
 
@@ -337,7 +337,7 @@ export async function anadirPiezaSuelta(
   }
   if (plan.data.dia_d !== diaDEsperado) {
     refresh();
-    return { error: SEMANA_CAMBIADA };
+    return { error: AVISO_SEMANA_CAMBIADA };
   }
   if (pieza.data === null || pieza.data.archivada) {
     refresh();
