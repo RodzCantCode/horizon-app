@@ -1,15 +1,12 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { isAuthError } from '@supabase/supabase-js';
 import { Button, TextField } from 'mochi-ui';
-import { validarContrasena } from '@/lib/contrasena';
+import { mensajeErrorContrasena, validarContrasena } from '@/lib/contrasena';
 import { crearClienteNavegador } from '@/lib/supabase/navegador';
 // Mismo aspecto que el formulario de Entrar.
 import estilos from '../entrar/entrar.module.css';
-
-// Un solo mensaje para cualquier fallo de Supabase (sesión caducada, contraseña igual a la de
-// antes...): nunca se enseña su texto, que además viene en inglés.
-const mensajeError = 'No se ha podido guardar la contraseña. Inténtalo otra vez.';
 
 interface PropiedadesFormulario {
   textoBoton: string;
@@ -41,8 +38,10 @@ export function FormularioContrasena({ textoBoton, alGuardar, alCancelar }: Prop
       const { error: errorAuth } = await supabase.auth.updateUser({ password: nueva });
       if (errorAuth) throw errorAuth;
       alGuardar();
-    } catch {
-      setError(mensajeError);
+    } catch (fallo) {
+      // El error de Supabase, para quien mire la consola; en pantalla, el mensaje en español.
+      console.error(fallo);
+      setError(mensajeErrorContrasena(isAuthError(fallo) ? fallo.code : undefined));
       setGuardando(false);
     }
   }
