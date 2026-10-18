@@ -71,7 +71,7 @@ acciones de servidor (`'use server'`).
 ### Tarea 1: Fechas en hora de España
 
 **Archivos:**
-- Crear: `lib/fechas.ts`, `lib/fechas.test.ts`, `vitest.config.ts`
+- Crear: `lib/fechas.ts`, `lib/fechas.test.ts`, `vitest.config.mts`
 - Modificar: `package.json` (devDependency `vitest`, script `"test": "vitest run"`)
 
 **Interfaces:**
@@ -423,9 +423,12 @@ expect(v[1].dias[4].piezas.map((p) => p.hora)).toEqual(['18:00']);
 **Interfaces:**
 - Consume: `moverPiezaDePlan`, `diaPermitido`, `generarPiezasDePlan` (T2); `mover_plan`,
   `cambiar_estrategia` (T8).
-- Produce: cada acción devuelve `Promise<{ error?: string }>`. `editarPiezaDePlan(id, fecha, hora)`
-  aplica `moverPiezaDePlan` antes de guardar. `quitarPiezaDePlan(id)` borra la fila.
-  `anadirPiezaSuelta(planId, piezaId, fecha, hora)` copia los datos de la pieza.
+- Produce: cada acción devuelve `Promise<{ error?: string }>`.
+  `editarPiezaDePlan(id, fecha, hora, original: { fecha, hora })` aplica `moverPiezaDePlan` antes de
+  guardar; `original` es lo que enseñaba el panel y, si la pieza ya no está ahí, no guarda.
+  `quitarPiezaDePlan(id)` borra la fila. `anadirPiezaSuelta(planId, piezaId, fecha, hora,
+  diaDEsperado)` copia los datos de la pieza; si el día D del plan ya no es `diaDEsperado`, no la
+  añade.
 
 - [x] **Paso 1:** tests de las acciones con cliente simulado: editar la fecha de una programada
   guarda `estado = 'pendiente'` y `revisar = true`; quitar una que ya no existe → `'Esa pieza ya no
