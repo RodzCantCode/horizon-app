@@ -33,6 +33,8 @@ const SIN_EPISODIO = 'Esa semana no tiene episodio';
 const ESTRATEGIA_NO_DISPONIBLE = 'Esa estrategia ya no está disponible';
 const PIEZA_NO_DISPONIBLE = 'Esa pieza ya no está disponible';
 const SEMANA_CON_PLAN = 'Esa semana ya tiene plan';
+const PIEZA_CAMBIADA = 'La pieza ha cambiado mientras la editabas. Revisa y vuelve a guardar.';
+const SEMANA_CAMBIADA = 'La semana ha cambiado mientras la editabas. Revisa y vuelve a guardar.';
 
 /**
  * Cambia el estado de una pieza de plan. Al marcarla como programada se quita también la marca de
@@ -188,11 +190,17 @@ function avisoDePlanDesfasado(error: { code: string; message: string } | null): 
  * que caer de D-1 a D+5 de ese plan y su posición respecto a D se recalcula. Si estaba programada y
  * cambia de verdad, `moverPiezaDePlan` la devuelve a pendiente y la marca para revisar en Metricool.
  * Una hora vacía es «sin hora». Si la pieza ya no existe, lo dice y refresca, como marcarEstado.
+ *
+ * `original` es el día y la hora que enseñaba el panel. Si la pieza ya no está ahí (otra persona ha
+ * movido la semana o la pieza con el panel abierto), no se guarda: guardar el día del panel desharía
+ * ese cambio sin avisar. Por lo mismo, el cambio solo se aplica si la fila sigue con el día y el
+ * estado que se leyeron. En los dos casos se avisa y se refresca, para que el panel se ponga al día.
  */
 export async function editarPiezaDePlan(
   id: string,
   fecha: string,
   hora: string | null,
+  original: { fecha: string; hora: string | null },
 ): Promise<{ error?: string }> {
   const horaNueva = leerHora(hora);
   if (horaNueva === undefined) return { error: HORA_NO_VALIDA };
@@ -208,8 +216,16 @@ export async function editarPiezaDePlan(
     refresh();
     return { error: PIEZA_QUITADA };
   }
+  if (leida.pieza.fecha !== original.fecha || leida.pieza.hora !== original.hora) {
+    refresh();
+    return { error: PIEZA_CAMBIADA };
+  }
   const desplazamiento = desplazamientoEnElPlan(leida.plan.diaD, fecha);
-  if (desplazamiento === null) return { error: DIA_FUERA_DEL_PLAN };
+  if (desplazamiento === null) {
+    // Los días del panel salen de su día D, que puede no ser ya el de la base.
+    refresh();
+    return { error: DIA_FUERA_DEL_PLAN };
+  }
 
   const movida = moverPiezaDePlan(leida.pieza, fecha, horaNueva);
   const supabase = await crearClienteServidor();
@@ -223,12 +239,15 @@ export async function editarPiezaDePlan(
       revisar: movida.revisar,
     })
     .eq('id', id)
+    .eq('fecha', leida.pieza.fecha)
+    .eq('estado', leida.pieza.estado)
     .select('id');
 
   if (error) return { error: NO_GUARDADO };
 
   refresh();
-  if (data.length === 0) return { error: PIEZA_QUITADA };
+  // Ninguna fila: entre la lectura y el cambio, otra persona la ha movido, marcado o quitado.
+  if (data.length === 0) return { error: PIEZA_CAMBIADA };
   return {};
 }
 
@@ -288,12 +307,17 @@ export async function editarEpisodio(planId: string, datos: DatosEpisodio): Prom
  * Añade a un plan una pieza que no venía en su estrategia: una copia fija de la pieza de la base
  * (`copiarPieza`), en un día de D-1 a D+5 de ese plan y a la hora elegida (vacía, sin hora). Una pieza
  * archivada o que ya no existe no se puede añadir. Empieza pendiente, como todas.
+ *
+ * `diaDEsperado` es el día D que enseñaba el panel, del que salen los días que ofrece. Si el plan ya
+ * tiene otro (otra persona ha movido la semana con el panel abierto), no se añade: el día elegido
+ * caería en otro sitio respecto a D. Se avisa y se refresca.
  */
 export async function anadirPiezaSuelta(
   planId: string,
   piezaId: string,
   fecha: string,
   hora: string | null,
+  diaDEsperado: string,
 ): Promise<{ error?: string }> {
   const horaElegida = leerHora(hora);
   if (horaElegida === undefined) return { error: HORA_NO_VALIDA };
@@ -308,6 +332,10 @@ export async function anadirPiezaSuelta(
   if (plan.data === null) {
     refresh();
     return { error: PLAN_NO_EXISTE };
+  }
+  if (plan.data.dia_d !== diaDEsperado) {
+    refresh();
+    return { error: SEMANA_CAMBIADA };
   }
   if (pieza.data === null || pieza.data.archivada) {
     refresh();

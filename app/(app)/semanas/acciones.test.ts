@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  antesDeEscribir,
   escrituras,
   fallos,
   filaDe,
@@ -267,10 +268,13 @@ describe('crearPlan', () => {
 describe('editarPiezaDePlan', () => {
   beforeEach(() => tablas.set('planes', [filaPlan()]));
 
+  // Lo que enseñaba el panel de la pieza de filaPiezaDePlan(): D a las 18:00.
+  const ORIGINAL = { fecha: '2026-10-23', hora: '18:00' };
+
   it('mover de día una programada la deja pendiente y marcada para revisar en Metricool', async () => {
     tablas.set('plan_piezas', [filaPiezaDePlan({ estado: 'programada' })]);
 
-    expect(await editarPiezaDePlan(CLIP, '2026-10-24', '18:00')).toEqual({});
+    expect(await editarPiezaDePlan(CLIP, '2026-10-24', '18:00', ORIGINAL)).toEqual({});
     expect(filaDe('plan_piezas', CLIP)).toEqual(
       expect.objectContaining({ fecha: '2026-10-24', hora: '18:00', estado: 'pendiente', revisar: true }),
     );
@@ -280,7 +284,7 @@ describe('editarPiezaDePlan', () => {
   it('el desplazamiento se recalcula desde el día D del plan', async () => {
     tablas.set('plan_piezas', [filaPiezaDePlan()]);
 
-    expect(await editarPiezaDePlan(CLIP, '2026-10-22', '18:00')).toEqual({});
+    expect(await editarPiezaDePlan(CLIP, '2026-10-22', '18:00', ORIGINAL)).toEqual({});
     expect(filaDe('plan_piezas', CLIP)).toEqual(expect.objectContaining({ fecha: '2026-10-22', desplazamiento: -1 }));
   });
 
@@ -288,7 +292,7 @@ describe('editarPiezaDePlan', () => {
     // La base da «18:00:00» y el panel manda «18:00»: es la misma hora.
     tablas.set('plan_piezas', [filaPiezaDePlan({ estado: 'programada' })]);
 
-    expect(await editarPiezaDePlan(CLIP, '2026-10-23', '18:00')).toEqual({});
+    expect(await editarPiezaDePlan(CLIP, '2026-10-23', '18:00', ORIGINAL)).toEqual({});
     expect(filaDe('plan_piezas', CLIP)).toEqual(expect.objectContaining({ estado: 'programada', revisar: false }));
   });
 
@@ -296,18 +300,21 @@ describe('editarPiezaDePlan', () => {
     tablas.set('plan_piezas', [filaPiezaDePlan()]);
 
     for (const fecha of ['2026-10-21', '2026-10-29', '2026-02-30', '']) {
-      expect(await editarPiezaDePlan(CLIP, fecha, '18:00')).toEqual({
+      expect(await editarPiezaDePlan(CLIP, fecha, '18:00', ORIGINAL)).toEqual({
         error: 'El día tiene que estar entre D-1 y D+5',
       });
     }
     expect(escrituras).toEqual([]);
     expect(filaDe('plan_piezas', CLIP)).toEqual(filaPiezaDePlan());
+    // Las dos fechas de verdad se comparan con el D de la base, que puede no ser el del panel:
+    // refresca para que el panel enseñe los días buenos.
+    expect(refresh).toHaveBeenCalledTimes(2);
   });
 
   it('una hora vacía se guarda como sin hora (null), nunca como texto vacío', async () => {
     tablas.set('plan_piezas', [filaPiezaDePlan()]);
 
-    expect(await editarPiezaDePlan(CLIP, '2026-10-23', '')).toEqual({});
+    expect(await editarPiezaDePlan(CLIP, '2026-10-23', '', ORIGINAL)).toEqual({});
     expect(escrituras[0].valores).toHaveProperty('hora', null);
     expect(filaDe('plan_piezas', CLIP)).toHaveProperty('hora', null);
   });
@@ -316,17 +323,75 @@ describe('editarPiezaDePlan', () => {
     tablas.set('plan_piezas', [filaPiezaDePlan()]);
 
     for (const hora of ['25:00', '18.00', 'tarde']) {
-      expect(await editarPiezaDePlan(CLIP, '2026-10-23', hora)).toEqual({ error: 'Esa hora no es válida' });
+      expect(await editarPiezaDePlan(CLIP, '2026-10-23', hora, ORIGINAL)).toEqual({ error: 'Esa hora no es válida' });
     }
     expect(escrituras).toEqual([]);
   });
 
   it('si la pieza ya no está en el plan (otra persona la ha quitado), lo dice y refresca', async () => {
-    expect(await editarPiezaDePlan(CLIP, '2026-10-24', '18:00')).toEqual({
+    expect(await editarPiezaDePlan(CLIP, '2026-10-24', '18:00', ORIGINAL)).toEqual({
       error: 'Esa pieza ya no está en el plan',
     });
     expect(escrituras).toEqual([]);
     expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('con el panel desfasado no deshace la semana que otra persona ha movido', async () => {
+    // B ha movido la semana al sábado 24: el clip principal está ya en el 24. A tenía el panel
+    // abierto con el clip en el 23 a las 18:00, cambia solo la hora a las 19:00 y guarda.
+    tablas.set('planes', [filaPlan({ dia_d: '2026-10-24' })]);
+    tablas.set('plan_piezas', [filaPiezaDePlan({ fecha: '2026-10-24' })]);
+
+    expect(await editarPiezaDePlan(CLIP, '2026-10-23', '19:00', ORIGINAL)).toEqual({
+      error: 'La pieza ha cambiado mientras la editabas. Revisa y vuelve a guardar.',
+    });
+    expect(escrituras).toEqual([]);
+    expect(filaDe('plan_piezas', CLIP)).toEqual(filaPiezaDePlan({ fecha: '2026-10-24' }));
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('si la hora ha cambiado con el panel abierto, tampoco guarda', async () => {
+    for (const hora of ['19:30:00', null]) {
+      tablas.set('plan_piezas', [filaPiezaDePlan({ hora })]);
+
+      expect(await editarPiezaDePlan(CLIP, '2026-10-24', '18:00', ORIGINAL)).toEqual({
+        error: 'La pieza ha cambiado mientras la editabas. Revisa y vuelve a guardar.',
+      });
+    }
+    expect(escrituras).toEqual([]);
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it('si la pieza cambia entre la lectura y la escritura (0 filas), lo dice y refresca', async () => {
+    tablas.set('plan_piezas', [filaPiezaDePlan()]);
+    // Otra persona la marca como programada justo después de que la acción la lea.
+    antesDeEscribir.set('plan_piezas.update', () => {
+      Object.assign(filaDe('plan_piezas', CLIP)!, { estado: 'programada' });
+    });
+
+    expect(await editarPiezaDePlan(CLIP, '2026-10-24', '18:00', ORIGINAL)).toEqual({
+      error: 'La pieza ha cambiado mientras la editabas. Revisa y vuelve a guardar.',
+    });
+    // Queda lo que hizo la otra persona, sin el cambio de día.
+    expect(filaDe('plan_piezas', CLIP)).toEqual(filaPiezaDePlan({ estado: 'programada' }));
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('el cambio va solo a esa pieza: filtra por su id, y por el día y el estado que se leyeron', async () => {
+    // Otra pieza del mismo plan, el mismo día y con el mismo estado: solo la distingue el id.
+    const otra = filaPiezaDePlan({ id: T4, pieza_id: 't4', nombre: 'T4 · Historia del invitado' });
+    tablas.set('plan_piezas', [filaPiezaDePlan(), otra]);
+
+    expect(await editarPiezaDePlan(CLIP, '2026-10-24', '18:00', ORIGINAL)).toEqual({});
+    expect(escrituras.map((e) => e.filtros)).toEqual([
+      [
+        ['id', CLIP],
+        ['fecha', '2026-10-23'],
+        ['estado', 'pendiente'],
+      ],
+    ]);
+    expect(filaDe('plan_piezas', CLIP)).toEqual(expect.objectContaining({ fecha: '2026-10-24', desplazamiento: 1 }));
+    expect(filaDe('plan_piezas', T4)).toEqual(otra);
   });
 });
 
@@ -393,7 +458,7 @@ describe('anadirPiezaSuelta', () => {
   beforeEach(() => tablas.set('planes', [filaPlan()]));
 
   it('copia los datos de la pieza en ese día, con la hora elegida, y la deja pendiente', async () => {
-    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11:30')).toEqual({});
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11:30', '2026-10-23')).toEqual({});
 
     expect(escrituras).toEqual([
       {
@@ -418,14 +483,14 @@ describe('anadirPiezaSuelta', () => {
   });
 
   it('una hora vacía va como null', async () => {
-    expect(await anadirPiezaSuelta(PLAN, 'rp', '2026-10-23', '')).toEqual({});
+    expect(await anadirPiezaSuelta(PLAN, 'rp', '2026-10-23', '', '2026-10-23')).toEqual({});
     expect(escrituras[0].valores).toHaveProperty('hora', null);
   });
 
   it('una pieza archivada no se puede añadir', async () => {
     tablas.set('piezas', filasPiezas({ t2: { archivada: true } }));
 
-    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11:30')).toEqual({
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11:30', '2026-10-23')).toEqual({
       error: 'Esa pieza ya no está disponible',
     });
     expect(escrituras).toEqual([]);
@@ -434,17 +499,17 @@ describe('anadirPiezaSuelta', () => {
   });
 
   it('un día fuera de D-1…D+5 o una hora que no es una hora no se guardan', async () => {
-    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-29', '11:30')).toEqual({
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-29', '11:30', '2026-10-23')).toEqual({
       error: 'El día tiene que estar entre D-1 y D+5',
     });
-    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11')).toEqual({ error: 'Esa hora no es válida' });
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11', '2026-10-23')).toEqual({ error: 'Esa hora no es válida' });
     expect(escrituras).toEqual([]);
   });
 
   it('si el plan ya no existe, lo dice y refresca', async () => {
     tablas.set('planes', []);
 
-    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11:30')).toEqual({ error: 'Ese plan ya no existe' });
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11:30', '2026-10-23')).toEqual({ error: 'Ese plan ya no existe' });
     expect(escrituras).toEqual([]);
     expect(refresh).toHaveBeenCalledOnce();
   });
@@ -452,7 +517,18 @@ describe('anadirPiezaSuelta', () => {
   it('si el plan desaparece entre la lectura y el alta (clave ajena rota), dice lo mismo', async () => {
     fallos.set('plan_piezas', { code: '23503', message: 'insert or update on table "plan_piezas" violates foreign key constraint' });
 
-    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11:30')).toEqual({ error: 'Ese plan ya no existe' });
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11:30', '2026-10-23')).toEqual({ error: 'Ese plan ya no existe' });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('si el día D del plan ha cambiado con el panel abierto, no la añade', async () => {
+    // Otra persona ha movido la semana al sábado 24; el panel aún tenía el viernes 23.
+    tablas.set('planes', [filaPlan({ dia_d: '2026-10-24' })]);
+
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11:30', '2026-10-23')).toEqual({
+      error: 'La semana ha cambiado mientras la editabas. Revisa y vuelve a guardar.',
+    });
+    expect(escrituras).toEqual([]);
     expect(refresh).toHaveBeenCalledOnce();
   });
 });

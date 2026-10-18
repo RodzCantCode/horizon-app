@@ -413,7 +413,8 @@ function AnadirPieza({ datos, alTerminar }: { datos: DatosDeSemana; alTerminar: 
 
   function guardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
-    enviar(() => anadirPiezaSuelta(plan.id, piezaId, fecha, hora), alTerminar);
+    // Con el día D del panel: si la semana se ha movido entretanto, el servidor no la añade.
+    enviar(() => anadirPiezaSuelta(plan.id, piezaId, fecha, hora, plan.diaD), alTerminar);
   }
 
   if (disponibles.length === 0) {

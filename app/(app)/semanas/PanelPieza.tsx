@@ -197,8 +197,9 @@ function DatosPieza({
  * (azul); lo demás, superficie. **Quitar de este plan** pregunta antes en una fila del propio panel.
  *
  * El servidor vuelve a comprobarlo todo y, si estaba programada y cambia, la deja para revisar en
- * Metricool. Las acciones refrescan la página al terminar: el botón sigue cargando hasta que llega la
- * pieza nueva y entonces se vuelve a ver (o, al quitarla, se cierra el panel).
+ * Metricool; si otra persona la ha movido con el panel abierto, no guarda y lo dice. Las acciones
+ * refrescan la página al terminar: el botón sigue cargando hasta que llega la pieza nueva y entonces
+ * se vuelve a ver (o, al quitarla, se cierra el panel).
  */
 function EditarPieza({
   detalle: { pieza, plan },
@@ -223,7 +224,8 @@ function EditarPieza({
     setError(null);
     iniciarGuardar(async () => {
       try {
-        const resultado = await editarPiezaDePlan(pieza.id, fecha, hora);
+        // Con lo que enseñaba el panel: si la pieza ya no está ahí, el servidor no la guarda.
+        const resultado = await editarPiezaDePlan(pieza.id, fecha, hora, { fecha: pieza.fecha, hora: pieza.hora });
         // Dentro de la transición, para volver a ver a la vez que llega la pieza nueva.
         startTransition(() => {
           if (resultado.error) setError(resultado.error);

@@ -3,7 +3,8 @@
 // «…, plan_piezas(estado)» o «…, estrategia_piezas(…)»), insert (una fila o varias), update,
 // delete, eq, order y maybeSingle; y rpc. Se porta como PostgREST en lo que importa aquí: update y
 // delete tocan solo las filas que cumplen los filtros y devuelven las tocadas. Así la prueba mira
-// cómo queda la base, no solo qué se pidió.
+// cómo queda la base, no solo qué se pidió. Con `antesDeEscribir`, otra persona cambia la base entre
+// la lectura de una acción y su escritura.
 //
 // Cada archivo de pruebas la conecta en lugar del cliente real (vi.mock se eleva por encima de los
 // import, así que el módulo se carga dentro de la fábrica):
@@ -38,6 +39,11 @@ export const fallos = new Map<string, ErrorBase>();
 export const escrituras: Escritura[] = [];
 /** Llamadas a funciones de la base (rpc), en orden. */
 export const llamadasRpc: [string, Record<string, unknown>][] = [];
+/**
+ * Lo que hace otra persona justo antes de la próxima escritura de una tabla («plan_piezas.update»):
+ * para probar qué pasa si la fila cambia entre la lectura de la acción y su escritura. Corre una vez.
+ */
+export const antesDeEscribir = new Map<string, () => void>();
 /** Lo que responde la próxima llamada a una función de la base. */
 export const rpc: { respuesta: { data: unknown; error: ErrorBase | null } } = {
   respuesta: { data: null, error: null },
@@ -46,6 +52,7 @@ export const rpc: { respuesta: { data: unknown; error: ErrorBase | null } } = {
 export function vaciarBase() {
   tablas.clear();
   fallos.clear();
+  antesDeEscribir.clear();
   escrituras.length = 0;
   llamadasRpc.length = 0;
   rpc.respuesta = { data: null, error: null };
@@ -81,7 +88,12 @@ function consulta(tabla: string) {
   }
 
   function ejecutar(): { data: unknown; error: ErrorBase | null } {
-    if (operacion !== 'select') escrituras.push({ tabla, operacion, valores, filtros });
+    if (operacion !== 'select') {
+      const otraPersona = antesDeEscribir.get(`${tabla}.${operacion}`);
+      antesDeEscribir.delete(`${tabla}.${operacion}`);
+      otraPersona?.();
+      escrituras.push({ tabla, operacion, valores, filtros });
+    }
     const fallo = fallos.get(`${tabla}.${operacion}`) ?? fallos.get(tabla);
     if (fallo) return { data: null, error: fallo };
 
