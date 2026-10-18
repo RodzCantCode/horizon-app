@@ -1,4 +1,4 @@
--- Pruebas de seguridad y registro del esquema inicial (migración esquema_inicial).
+-- Pruebas de seguridad y registro del esquema (migraciones esquema_inicial y ajustes_esquema).
 --
 -- Cómo se ejecutan: el archivo entero con execute_sql de la conexión supabase-horizon. Todo va en
 -- una transacción que acaba en rollback, así que los usuarios y las filas de prueba no se quedan en
@@ -309,6 +309,46 @@ begin
   insert into public.planes (lunes, dia_d, con_episodio, estrategia_nombre)
   values ('2026-10-26', '2026-11-01', true, 'Prueba');
   reset role;
+  insert into resultados (prueba, ok, detalle)
+  values (prueba, cardinality(fallos) = 0, array_to_string(fallos, '; '));
+exception when others then
+  insert into resultados (prueba, ok, detalle) values (prueba, false, sqlerrm);
+end $$;
+
+-- 10. Con sesión no se pueden vaciar las tablas ni crear referencias o disparadores sobre ellas.
+do $$
+declare
+  prueba text := 'con sesión no hay permiso de truncate, references ni trigger en ninguna tabla';
+  tabla text;
+  fallos text[] := '{}';
+begin
+  foreach tabla in array array['perfiles', 'piezas', 'estrategias', 'estrategia_piezas', 'planes',
+                               'plan_piezas', 'registro'] loop
+    if has_table_privilege('authenticated', 'public.' || tabla, 'truncate, references, trigger') then
+      fallos := fallos || (tabla || ': authenticated tiene truncate, references o trigger');
+    end if;
+  end loop;
+  insert into resultados (prueba, ok, detalle)
+  values (prueba, cardinality(fallos) = 0, array_to_string(fallos, '; '));
+exception when others then
+  insert into resultados (prueba, ok, detalle) values (prueba, false, sqlerrm);
+end $$;
+
+-- 11. Las funciones de los disparadores no se pueden llamar desde fuera (security definer).
+do $$
+declare
+  prueba text := 'ni anon ni authenticated pueden ejecutar registrar_cambio() ni crear_perfil()';
+  rol text;
+  funcion text;
+  fallos text[] := '{}';
+begin
+  foreach rol in array array['anon', 'authenticated'] loop
+    foreach funcion in array array['public.registrar_cambio()', 'public.crear_perfil()'] loop
+      if has_function_privilege(rol, funcion, 'execute') then
+        fallos := fallos || (rol || ' puede ejecutar ' || funcion);
+      end if;
+    end loop;
+  end loop;
   insert into resultados (prueba, ok, detalle)
   values (prueba, cardinality(fallos) = 0, array_to_string(fallos, '; '));
 exception when others then
