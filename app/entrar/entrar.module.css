@@ -18,10 +18,31 @@
   margin-bottom: 2rem;
 }
 
+/* «Crea tu contraseña»: CONTRASEÑA no cabe a 375 px con el tamaño de ENTRAR; así cabe hasta 320. */
+.titularLargo {
+  font-size: clamp(1.75rem, 9vw, 3.5rem);
+}
+
+/* El aviso de un enlace de invitación o de recuperación que no vale (/entrar?error=enlace). */
+.aviso {
+  margin: -0.75rem 0 1.5rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--mochi-danger-strong);
+}
+
 .formulario {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
+}
+
+/* Botones en fila, que bajan a otra si no caben. Lo usa el formulario de contraseña
+   (app/crear-contrasena/formulario.tsx), que comparte estos estilos. */
+.botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 /* El hueco del mensaje existe siempre (vacío si no hay error) para que el botón no salte. */

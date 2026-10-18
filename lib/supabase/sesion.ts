@@ -1,13 +1,11 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { clavePublicableSupabase, urlSupabase } from './entorno';
+import { destinoSegunSesion } from './rutas';
 import type { Database } from './tipos';
 
-export const rutaEntrar = '/entrar';
-
 // Lo llama proxy.ts en cada petición: refresca la sesión de Supabase (si el token ha caducado, lo
-// renueva y reescribe las cookies) y decide a dónde va cada uno. Sin sesión, a /entrar; con
-// sesión, /entrar manda a la portada.
+// renueva y reescribe las cookies) y decide a dónde va cada uno con destinoSegunSesion (rutas.ts).
 export async function actualizarSesion(peticion: NextRequest) {
   let respuesta = NextResponse.next({ request: peticion });
   let cabecerasSupabase: Record<string, string> = {};
@@ -38,15 +36,12 @@ export async function actualizarSesion(peticion: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const conSesion = Boolean(data?.claims);
 
-  const ruta = peticion.nextUrl.pathname;
-  const enEntrar = ruta === rutaEntrar;
-
-  // Sin sesión fuera de /entrar, o con sesión en /entrar: toca redirigir.
-  if (conSesion === enEntrar) {
+  const destino = destinoSegunSesion(peticion.nextUrl.pathname, conSesion);
+  if (destino) {
     // Una redirección tiene que llevarse las cookies (y sus cabeceras) que Supabase acabe de
     // escribir, por ejemplo al borrar una sesión caducada; si no, el navegador se queda las viejas.
     const url = peticion.nextUrl.clone();
-    url.pathname = conSesion ? '/' : rutaEntrar;
+    url.pathname = destino;
     url.search = '';
     const redireccion = NextResponse.redirect(url);
     respuesta.cookies.getAll().forEach((cookie) => redireccion.cookies.set(cookie));

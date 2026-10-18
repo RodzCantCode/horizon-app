@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { Button } from 'mochi-ui';
 import { crearClienteServidor } from '@/lib/supabase/servidor';
-import { rutaEntrar } from '@/lib/supabase/sesion';
+import { rutaEntrar } from '@/lib/supabase/rutas';
 import { salir } from './acciones';
 import estilos from './inicio.module.css';
 
@@ -11,16 +11,9 @@ import estilos from './inicio.module.css';
 export default function Inicio() {
   return (
     <main className={estilos.pagina}>
-      <header className={estilos.cabecera}>
-        <p className="logo" aria-label="Horizon Sport">
-          <span>Horizon</span>
-          <span className="logo__punto">.</span>
-          <span>Sport</span>
-        </p>
-        <Suspense>
-          <Sesion />
-        </Suspense>
-      </header>
+      <Suspense>
+        <Sesion />
+      </Suspense>
     </main>
   );
 }

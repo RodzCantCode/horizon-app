@@ -110,6 +110,10 @@ el inicio de sesión real no se ha probado. Falta, a mano: crear los 3 usuarios 
 en el proyecto de Vercel y comprobar que su Framework Preset es Next.js (se creó cuando el repo era
 HTML estático).
 
+18-oct-2026: acceso **solo por invitación** (nadie crea usuarios a mano ni hay registro): Mario
+invita desde Supabase y el correo lleva a **Crea tu contraseña**. Lo que hay que configurar en
+Supabase antes de la primera invitación: [docs/acceso.md](docs/acceso.md).
+
 Siguiente paso previsto: datos compartidos en **Supabase** (RLS en todas las tablas). No se programa un
 login propio.
 
@@ -120,7 +124,9 @@ familia (Archivo) con el contraste en la anchura, azul `#169EFF` solo en la acci
 textos de ayuda tipo tooltip. Debe funcionar bien en el móvil.
 
 - Los tokens (colores, fuente) son los de la web, con los mismos nombres, en `app/global.css`. Solo
-  está lo que la app usa; si hace falta algo más, se copia de la web con su nombre.
+  está lo que la app usa; si hace falta algo más, se copia de la web con su nombre. El tema claro
+  (mismos tokens con otros valores) y los dos que la web no tiene (`--azul-texto`, `--ambar`) los
+  define la app en ese mismo archivo.
 - **Botones y campos, siempre de Mochi** (`mochi-ui`), con la paleta de Horizon redefiniendo sus
   variables `--mochi-*` en `app/global.css` (misma tabla que la web). Azul sólido (`variant="accent"`)
   solo en la acción principal de cada pantalla; el resto, `surface`.
@@ -150,17 +156,19 @@ publicable; las dos son públicas por diseño). `.env.local` no se sube. La clav
 
 | Ruta | Qué es |
 | --- | --- |
-| `app/layout.tsx` | Raíz: fuente, estilos de Mochi y tema oscuro |
-| `app/global.css` | Tokens de Horizon y variables de Mochi |
-| `app/page.tsx` | `/`, protegida: correo del usuario y «Salir» (`app/acciones.ts`) |
-| `app/entrar/` | `/entrar`: correo y contraseña. Sin registro: las cuentas se crean a mano en Supabase |
-| `proxy.ts` | Corre antes de cada ruta (en Next.js 16 el `middleware` se llama `proxy`): refresca la sesión y manda a `/entrar` a quien no la tenga |
-| `lib/supabase/` | Clientes de Supabase con `@supabase/ssr`: `navegador.ts`, `servidor.ts` y `sesion.ts` (el del proxy) |
+| `app/layout.tsx` | Raíz: fuente, estilos de Mochi y el guion que pone el tema elegido antes de pintar (claro, oscuro o sistema: `lib/tema.ts`) |
+| `app/global.css` | Tokens de Horizon (tema oscuro y claro) y variables de Mochi |
+| `app/(app)/` | Lo que va con cabecera (Semanas `/`, Estrategias, Ajustes). `/` sigue siendo la portada provisional: correo y «Salir» |
+| `app/entrar/` | `/entrar`: correo y contraseña. Sin registro: solo por invitación |
+| `app/auth/confirmar/`, `app/crear-contrasena/` | Adonde lleva el enlace de los correos de invitación y recuperación, y **Crea tu contraseña**. Lo que se configura en Supabase: [docs/acceso.md](docs/acceso.md) |
+| `proxy.ts` | Corre antes de cada ruta (en Next.js 16 el `middleware` se llama `proxy`): refresca la sesión y decide adónde va cada uno (`lib/supabase/rutas.ts`) |
+| `lib/supabase/` | Clientes de Supabase con `@supabase/ssr`: `navegador.ts`, `servidor.ts` y `sesion.ts` (el del proxy); `rutas.ts`, qué rutas piden sesión |
+| `docs/acceso.md` | Cómo invitar, cómo mandar una recuperación y qué configurar en Supabase |
 | `prototipo/index.html` | Prototipo de octubre: referencia del modelo, no de la interfaz. No se sirve |
 | `AGENTS.md` | Lo escribe `next dev`: avisa a los agentes de que lean la documentación de Next que viene en `node_modules/next/dist/docs/`. No se edita a mano |
 
 Next.js 16 con Cache Components activado (`next.config.ts`, lo que trae `create-next-app`): lo que
-lee la petición (cookies, sesión) va dentro de `<Suspense>`, como `Sesion` en `app/page.tsx`.
+lee la petición (cookies, sesión) va dentro de `<Suspense>`, como `Sesion` en `app/(app)/page.tsx`.
 
 ## Convenciones
 

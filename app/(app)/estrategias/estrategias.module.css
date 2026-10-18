@@ -1,0 +1,8 @@
+.pagina {
+  padding: 0 var(--margen) clamp(2rem, 5vw, 3rem);
+}
+
+.titular {
+  font-size: clamp(2rem, 7vw, 2.75rem);
+  padding-top: clamp(1rem, 3vw, 2rem);
+}

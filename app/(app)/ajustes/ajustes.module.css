@@ -1,0 +1,44 @@
+.pagina {
+  padding: 0 var(--margen) clamp(2rem, 5vw, 3rem);
+}
+
+.titular {
+  font-size: clamp(2rem, 7vw, 2.75rem);
+  padding-top: clamp(1rem, 3vw, 2rem);
+  margin-bottom: clamp(2rem, 5vw, 3rem);
+}
+
+.ajustes {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  max-width: 26rem;
+}
+
+.seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+/* El mismo ancho para el selector y para su hueco mientras se hidrata (Mochi lo pinta de 44 px). */
+.selectorTema {
+  max-width: 22rem;
+  min-height: 44px;
+}
+
+.contrasena {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+}
+
+.formularioContrasena {
+  flex-basis: 100%;
+}
+
+.aviso {
+  font-size: 0.875rem;
+  color: var(--papel-medio);
+}

@@ -4,8 +4,14 @@
    se inventan otros. Una sola familia (Archivo variable) con el contraste en el eje de anchura.
    Aquí solo está lo que la app usa; si hace falta algo más de la web, se copia de allí con el mismo
    nombre.
+
+   Dos temas con los mismos tokens: el oscuro es el de la web y el claro lo define la app con la
+   misma lógica (ver «Tema claro», más abajo). Cada token nombra una función, no un color: las
+   tintas son los fondos y las superficies y los papeles son el texto, también en el tema claro.
+   Cuál se ve lo decide data-tema en <html> (lib/tema.ts); sin atributo, el del sistema.
    ========================================================================= */
 
+/* --- Tema oscuro (el de la web) ------------------------------------ */
 :root {
   --tinta-900: #07090c;
   --tinta-850: #0a0e13;
@@ -24,10 +30,59 @@
   --azul-tinta: #04121e;
   --azul-filete: rgba(22, 158, 255, 0.32);
 
+  /* Estos dos no están en la web. --azul-texto es el azul cuando va directamente sobre el fondo
+     (foco, subrayado de la sección activa, texto); en oscuro es el mismo --azul. --ambar marca lo
+     que va justo o hay que revisar. */
+  --azul-texto: #169eff;
+  --ambar: #f0b45a;
+
   /* --fuente-archivo la define next/font en app/layout.tsx. */
   --fuente: var(--fuente-archivo), system-ui, sans-serif;
 
   --margen: clamp(1.25rem, 5vw, 4.5rem);
+}
+
+/* --- Tema claro ------------------------------------------------------ */
+/* El de la maqueta: fondo gris muy claro, superficies blancas y texto tinta. Medido para 4.5:1 en
+   texto pequeño (WCAG AA) sobre el fondo y sobre blanco; el peor caso es --azul-texto, 4.8:1. El
+   --azul de los botones no cambia (lleva texto oscuro encima); como texto sobre el fondo daría
+   2.6:1, por eso existe --azul-texto. Si se toca un gris, hay que volver a medir.
+   Va dos veces con los mismos valores: elegido en Ajustes (data-tema="claro") y, sin elección, si
+   el sistema está en claro. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-tema='oscuro']) {
+    --tinta-900: #f4f6f8;
+    --tinta-850: #ffffff;
+    --tinta-800: #ffffff;
+    --tinta-700: #ffffff;
+    --tinta-600: #ffffff;
+    --linea: #dde3e8;
+    --linea-fuerte: #b9c4cd;
+
+    --papel: #0a0e13;
+    --papel-medio: #47535e;
+    --papel-tenue: #5d6a76;
+
+    --azul-texto: #0b6fbb;
+    --ambar: #8f5200;
+  }
+}
+
+:root[data-tema='claro'] {
+  --tinta-900: #f4f6f8;
+  --tinta-850: #ffffff;
+  --tinta-800: #ffffff;
+  --tinta-700: #ffffff;
+  --tinta-600: #ffffff;
+  --linea: #dde3e8;
+  --linea-fuerte: #b9c4cd;
+
+  --papel: #0a0e13;
+  --papel-medio: #47535e;
+  --papel-tenue: #5d6a76;
+
+  --azul-texto: #0b6fbb;
+  --ambar: #8f5200;
 }
 
 *,
@@ -65,7 +120,7 @@ p {
 }
 
 :focus-visible {
-  outline: 2px solid var(--azul);
+  outline: 2px solid var(--azul-texto);
   outline-offset: 3px;
 }
 
@@ -109,8 +164,12 @@ p {
 /* --- Mochi con la paleta de Horizon --------------------------------- */
 /* Botones y campos vienen de Mochi (mochi-ui). Aquí solo se redefinen sus variables, con la misma
    tabla de equivalencias que la web: la forma, el tamaño y el movimiento son los de la librería. El
-   rojo de error se queda con el de Mochi, porque Horizon no tiene uno. */
-:root[data-theme='dark'] {
+   rojo de error se queda con el de Mochi, porque Horizon no tiene uno.
+   Como apuntan a los tokens, la misma tabla vale para los dos temas. Mochi pone sus colores en
+   [data-theme] (lib/tema.ts lo mantiene a la par de data-tema); con el atributo en el selector,
+   estos ganan siempre. Lo que no se redefine (el rojo, los rellenos) sale del tema de Mochi que
+   toque. */
+:root[data-theme] {
   --mochi-font-sans: var(--fuente);
 
   --mochi-canvas: var(--tinta-900);
@@ -127,11 +186,17 @@ p {
   --mochi-on-surface-muted: var(--papel-medio);
   --mochi-surface-border: var(--linea-fuerte);
 
+  /* La pastilla elegida (pestañas, interruptores) es la inversa del fondo: clara en oscuro y tinta
+     en claro, como en la maqueta. La de Mochi es blanca y no se vería sobre el blanco del claro. */
+  --mochi-thumb: var(--papel);
+  --mochi-on-thumb: var(--tinta-900);
+
   --mochi-accent: var(--azul);
   --mochi-on-accent: var(--azul-tinta);
-  --mochi-accent-strong: var(--azul);
-  --mochi-focus-ring: var(--azul);
-  --mochi-scrim: rgba(7, 9, 12, 0.6);
+  --mochi-accent-strong: var(--azul-texto);
+  --mochi-focus-ring: var(--azul-texto);
+  /* En oscuro, el mismo rgba(7, 9, 12, 0.6) de antes. */
+  --mochi-scrim: color-mix(in srgb, var(--tinta-900) 60%, transparent);
 }
 
 /* Azul sólido (`accent`) solo en la acción principal de cada pantalla; `surface` para el resto. */
