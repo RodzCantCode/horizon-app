@@ -235,6 +235,18 @@ export function tituloSemana(lunes: string): string {
 }
 
 /**
+ * La nota de **Mover la semana** cuando el plan cambia de semana: «Pasa a la semana del 26 oct al 1
+ * nov». Si esa semana no es toda del año de hoy, con el año de su domingo: «… del 28 dic al 3 ene de
+ * 2027».
+ */
+export function pasaALaSemana(lunes: string, hoy: string): string {
+  const anioDeHoy = hoy.slice(0, 4);
+  const anioDelDomingo = sumarDias(lunes, 6).slice(0, 4);
+  const conAnio = lunes.slice(0, 4) !== anioDeHoy || anioDelDomingo !== anioDeHoy;
+  return `Pasa a la semana ${delLunesAlDomingo(lunes)}${conAnio ? ` de ${anioDelDomingo}` : ''}`;
+}
+
+/**
  * Los días en que puede ir una pieza de un plan, de D-1 a D+5, para elegirlos en un panel:
  * «Jueves 22 oct · D-1».
  */

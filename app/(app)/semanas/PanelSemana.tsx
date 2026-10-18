@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Button, PencilIcon, RadioGroup, Select, TextField } from 'mochi-ui';
 import { esFecha, existeEnMadrid, lunesDe, normalizarHora } from '@/lib/fechas';
 import { estrategiasParaPlanificar } from '@/lib/planes';
-import { diasDelPlan, etiquetaDia, fechaLarga, tituloSemana } from '@/lib/semanas';
+import { diasDelPlan, etiquetaDia, fechaLarga, pasaALaSemana, rangoSemanas, tituloSemana } from '@/lib/semanas';
 import type { Estrategia, Pieza, PiezaDePlan, Plan } from '@/lib/tipos';
 import { BotonesGuardar, useEnvio } from '../componentes/edicion';
 import { Panel, useFocoAlCambiarDeVista, useMientrasSeCierra } from '../componentes/Panel';
@@ -112,7 +112,13 @@ function ContenidoSemana({
       {vista === 'ver' && <DatosSemana datos={datos} hoy={hoy} alEditar={() => setVista('editar')} />}
       {vista === 'editar' && <EditarSemana plan={datos.plan} alElegir={setVista} alTerminar={volver} />}
       {vista === 'mover' && (
-        <MoverSemana lunes={lunes} plan={datos.plan} alTerminar={volver} alMoverAOtraSemana={alMoverAOtraSemana} />
+        <MoverSemana
+          lunes={lunes}
+          plan={datos.plan}
+          hoy={hoy}
+          alTerminar={volver}
+          alMoverAOtraSemana={alMoverAOtraSemana}
+        />
       )}
       {vista === 'estrategia' && <CambiarEstrategia datos={datos} alTerminar={volver} />}
       {vista === 'anadir' && <AnadirPieza datos={datos} alTerminar={volver} />}
@@ -249,25 +255,29 @@ function EditarSemana({
 }
 
 /**
- * **Mover la semana**: un día D nuevo, cualquiera. Todas las piezas se mueven los mismos días y las
- * programadas quedan para revisar en Metricool (lo hace la base). Si cae en otra semana, se dice
- * antes de guardar y, al guardar, el plan pasa a esa semana y el panel se cierra; si esa semana ya
- * tiene plan, el servidor lo dice y no cambia nada.
+ * **Mover la semana**: un día D nuevo dentro de las semanas que se ven en la portada (el servidor
+ * también lo comprueba). Todas las piezas se mueven los mismos días y las programadas quedan para
+ * revisar en Metricool (lo hace la base). Si cae en otra semana, se dice antes de guardar y, al
+ * guardar, el plan pasa a esa semana y el panel se cierra; si esa semana ya tiene plan, el servidor
+ * lo dice y no cambia nada.
  */
 function MoverSemana({
   lunes,
   plan,
+  hoy,
   alTerminar,
   alMoverAOtraSemana,
 }: {
   lunes: string;
   plan: Plan;
+  hoy: string;
   alTerminar: () => void;
   alMoverAOtraSemana: (nuevoLunes: string) => void;
 }) {
   const [diaD, setDiaD] = useState(plan.diaD);
   const { enviando, error, enviar } = useEnvio();
   const nuevoLunes = esFecha(diaD) ? lunesDe(diaD) : lunes;
+  const portada = rangoSemanas(hoy);
 
   function guardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -281,12 +291,12 @@ function MoverSemana({
         <TextField
           type="date"
           label={plan.conEpisodio ? 'Nuevo día de publicación' : 'Nuevo día de referencia'}
+          min={portada.desde}
+          max={portada.hasta}
           value={diaD}
           onValueChange={setDiaD}
         />
-        {nuevoLunes !== lunes && (
-          <p className={estilos.notaCampo}>{`Pasa a la ${tituloSemana(nuevoLunes).toLowerCase()}`}</p>
-        )}
+        {nuevoLunes !== lunes && <p className={estilos.notaCampo}>{pasaALaSemana(nuevoLunes, hoy)}</p>}
       </div>
       <BotonesGuardar guardando={enviando} error={error} alCancelar={alTerminar} />
     </form>

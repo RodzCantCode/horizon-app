@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   antesDeEscribir,
   escrituras,
@@ -534,6 +534,14 @@ describe('anadirPiezaSuelta', () => {
 });
 
 describe('moverSemana', () => {
+  // Hoy es el miércoles 21 de octubre de 2026 en España: la portada va del lunes 12 de octubre (la
+  // semana pasada) al domingo 8 de noviembre (dentro de dos semanas).
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-21T10:00:00Z'));
+  });
+  afterEach(() => vi.useRealTimers());
+
   it('mueve el plan con mover_plan y refresca', async () => {
     expect(await moverSemana(PLAN, '2026-10-30')).toEqual({});
     expect(llamadasRpc).toEqual([['mover_plan', { plan_id: PLAN, nuevo_dia_d: '2026-10-30' }]]);
@@ -559,6 +567,21 @@ describe('moverSemana', () => {
       expect(await moverSemana(PLAN, fecha)).toEqual({ error: 'Esa fecha no es válida' });
     }
     expect(llamadasRpc).toEqual([]);
+  });
+
+  it('fuera de las semanas que se ven en la portada no se mueve: el plan dejaría de verse', async () => {
+    for (const fecha of ['2027-10-23', '2026-10-11', '2026-11-09']) {
+      expect(await moverSemana(PLAN, fecha)).toEqual({
+        error: 'Solo se puede mover dentro de las semanas que se ven en la portada.',
+      });
+    }
+    expect(llamadasRpc).toEqual([]);
+  });
+
+  it('el primer y el último día de la portada sí valen', async () => {
+    expect(await moverSemana(PLAN, '2026-10-12')).toEqual({});
+    expect(await moverSemana(PLAN, '2026-11-08')).toEqual({});
+    expect(llamadasRpc.map(([, argumentos]) => argumentos.nuevo_dia_d)).toEqual(['2026-10-12', '2026-11-08']);
   });
 
   it('si Supabase falla por otra cosa, da un error legible y no refresca', async () => {

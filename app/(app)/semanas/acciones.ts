@@ -3,7 +3,7 @@
 import { refresh } from 'next/cache';
 import { aPieza, leerEstrategiasYPiezas } from '@/lib/datos/estrategias';
 import { aFilaPiezaDePlan, aFilaPlan, leerPiezaDePlan } from '@/lib/datos/semanas';
-import { diaSemana, diasEntre, esFecha, normalizarHora } from '@/lib/fechas';
+import { diaSemana, diasEntre, esFecha, hoyEnMadrid, normalizarHora } from '@/lib/fechas';
 import {
   copiarPieza,
   DESPLAZAMIENTOS,
@@ -11,6 +11,7 @@ import {
   generarPiezasDePlan,
   moverPiezaDePlan,
 } from '@/lib/planes';
+import { rangoSemanas } from '@/lib/semanas';
 import { crearClienteServidor } from '@/lib/supabase/servidor';
 import type { Estado, Estrategia, NuevaPiezaDePlan } from '@/lib/tipos';
 
@@ -35,6 +36,7 @@ const PIEZA_NO_DISPONIBLE = 'Esa pieza ya no está disponible';
 const SEMANA_CON_PLAN = 'Esa semana ya tiene plan';
 const PIEZA_CAMBIADA = 'La pieza ha cambiado mientras la editabas. Revisa y vuelve a guardar.';
 const SEMANA_CAMBIADA = 'La semana ha cambiado mientras la editabas. Revisa y vuelve a guardar.';
+const FUERA_DE_LA_PORTADA = 'Solo se puede mover dentro de las semanas que se ven en la portada.';
 
 /**
  * Cambia el estado de una pieza de plan. Al marcarla como programada se quita también la marca de
@@ -367,11 +369,16 @@ export async function anadirPiezaSuelta(
 
 /**
  * Mueve la semana entera de fecha con la función `mover_plan` de la base: el día D pasa a
- * `nuevoDiaD` (cualquier fecha) y todas las piezas se mueven los mismos días; las programadas quedan
- * para revisar en Metricool. Si el nuevo D cae en otra semana que ya tiene plan, no cambia nada.
+ * `nuevoDiaD` y todas las piezas se mueven los mismos días; las programadas quedan para revisar en
+ * Metricool. Si el nuevo D cae en otra semana que ya tiene plan, no cambia nada.
+ *
+ * El nuevo D tiene que caer en las semanas que pinta la portada hoy (`rangoSemanas`): más allá, el
+ * plan dejaría de verse y no habría desde dónde abrirlo para volver a moverlo.
  */
 export async function moverSemana(planId: string, nuevoDiaD: string): Promise<{ error?: string }> {
   if (!esFecha(nuevoDiaD)) return { error: FECHA_NO_VALIDA };
+  const { desde, hasta } = rangoSemanas(hoyEnMadrid());
+  if (nuevoDiaD < desde || nuevoDiaD > hasta) return { error: FUERA_DE_LA_PORTADA };
 
   const supabase = await crearClienteServidor();
   const { error } = await supabase.rpc('mover_plan', { plan_id: planId, nuevo_dia_d: nuevoDiaD });

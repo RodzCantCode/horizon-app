@@ -10,6 +10,7 @@ import {
   fechaLarga,
   fechaYPosicion,
   fraseDeRegistro,
+  pasaALaSemana,
   posicionRespectoAD,
   rangoSemanas,
   resumenPlegada,
@@ -323,6 +324,22 @@ describe('tituloSemana', () => {
   it('nombra la semana de lunes a domingo, con los dos meses si cambia de mes', () => {
     expect(tituloSemana('2026-10-19')).toBe('Semana del 19 al 25 oct');
     expect(tituloSemana('2026-10-26')).toBe('Semana del 26 oct al 1 nov');
+  });
+});
+
+describe('pasaALaSemana', () => {
+  it('dice a qué semana pasa el plan', () => {
+    expect(pasaALaSemana('2026-10-26', '2026-10-21')).toBe('Pasa a la semana del 26 oct al 1 nov');
+  });
+
+  it('con el año si esa semana no es del año de hoy', () => {
+    expect(pasaALaSemana('2027-10-18', '2026-10-21')).toBe('Pasa a la semana del 18 al 24 oct de 2027');
+    expect(pasaALaSemana('2025-10-20', '2026-10-21')).toBe('Pasa a la semana del 20 al 26 oct de 2025');
+  });
+
+  it('una semana entre dos años lleva el año del domingo', () => {
+    expect(pasaALaSemana('2026-12-28', '2026-12-16')).toBe('Pasa a la semana del 28 dic al 3 ene de 2027');
+    expect(pasaALaSemana('2025-12-29', '2026-01-07')).toBe('Pasa a la semana del 29 dic al 4 ene de 2026');
   });
 });
 
