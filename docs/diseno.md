@@ -58,12 +58,13 @@ pantalla principal; fuera del modo edición solo se cambia el estado de una piez
   verse).
 - El modo edición termina con **Guardar** o **Cancelar**. Los cambios afectan solo a ese plan, nunca
   a la estrategia ni a la pieza de origen.
-- **Panel desfasado.** Si otra persona cambia algo con el panel abierto, al guardar no se pisa su
-  cambio: si la pieza ya no está en el día y la hora que enseñaba el panel, o la semana tiene otro
-  día D, no se guarda. El panel sale del modo edición y enseña los datos nuevos con el aviso («La
+- **Panel desfasado.** Al cambiar el día o la hora de una pieza, o al añadir una pieza suelta, no se
+  pisa lo que otra persona haya cambiado con el panel abierto: si la pieza ya no está en el día y la
+  hora que enseñaba el panel, o la semana tiene otro día D, no se guarda. El panel sale del modo edición y enseña los datos nuevos con el aviso («La
   pieza ha cambiado…», «La semana ha cambiado…», con «Revisa y vuelve a guardar»); para volver a
   intentarlo se entra otra vez con el lápiz, ya con esos datos. Si la pieza o el plan ya no existen,
-  lo dice.
+  lo dice. **No cubre** «Editar datos del episodio» (número, invitado, tema): ahí gana el último que
+  guarda.
 
 ### Planificar
 

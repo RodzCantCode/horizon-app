@@ -368,6 +368,7 @@ expect(v[1].dias[4].piezas.map((p) => p.hora)).toEqual(['18:00']);
   y el registro de la pieza con frases como «Izan la marcó como programada · 14 oct».
 - [x] **Paso 3:** `npm test`, `npm run build`. En el navegador: marcar y desmarcar, ver el registro
   con el nombre propio, recargar con el panel abierto, móvil con hoja inferior.
+  *(Comprobado con datos inventados y sin sesión; la comprobación con sesión va en la Tarea 12.)*
 - [x] **Paso 4:** commit «Panel de pieza: estado y registro».
 
 ### Tarea 8: Funciones SQL de varias filas
@@ -410,6 +411,7 @@ expect(v[1].dias[4].piezas.map((p) => p.hora)).toEqual(['18:00']);
 - [x] **Paso 3:** `npm test`, `npm run build`. En el navegador: planificar la semana siguiente con y
   sin episodio; doble clic en **Crear plan** no duplica; la semana aparece llena y el aviso
   desaparece.
+  *(Comprobado con datos inventados y sin sesión; la comprobación con sesión va en la Tarea 12.)*
 - [x] **Paso 4:** commit «Planificar una semana».
 
 ### Tarea 10: Modo edición de pieza y de semana
@@ -439,6 +441,7 @@ expect(v[1].dias[4].piezas.map((p) => p.hora)).toEqual(['18:00']);
   Al cambiar una hora, el mismo aviso que al planificar si no existe en España (`existeEnMadrid`).
 - [x] **Paso 3:** `npm test`, `npm run build`. En el navegador: cada edición, la marca ámbar de
   «revisar en Metricool» y que desaparece al volver a marcar programada.
+  *(Comprobado con datos inventados y sin sesión; la comprobación con sesión va en la Tarea 12.)*
 - [x] **Paso 4:** commit «Modo edición de piezas y semanas».
 
 ### Tarea 11: Estrategias y Piezas
@@ -462,6 +465,7 @@ expect(v[1].dias[4].piezas.map((p) => p.hora)).toEqual(['18:00']);
 - [x] **Paso 3:** `npm test`, `npm run build`. En el navegador: crear y editar una estrategia,
   archivar una pieza que usa (deja de ofrecerse al planificar, y los planes que la tienen se siguen
   viendo), recuperarla.
+  *(Comprobado con datos inventados y sin sesión; la comprobación con sesión va en la Tarea 12.)*
 - [x] **Paso 4:** commit «Sección Estrategias: estrategias y piezas».
 
 ### Tarea 12: Recorrido completo, documentación y publicación
