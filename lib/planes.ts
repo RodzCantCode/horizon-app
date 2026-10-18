@@ -82,9 +82,12 @@ export function necesitaAtencion(p: PiezaDePlan, hoy: string): boolean {
   return vaJusta(p, hoy) || p.revisar;
 }
 
-/** Una estrategia solo se ofrece si todas sus piezas existen y ninguna está archivada. */
+/**
+ * Una estrategia solo se ofrece si tiene alguna pieza (sin ninguna daría un plan vacío), todas sus
+ * piezas existen y ninguna está archivada.
+ */
 export function estrategiaDisponible(e: Estrategia, piezas: Pieza[]): boolean {
-  return e.items.every((item) => {
+  return e.items.length > 0 && e.items.every((item) => {
     const pieza = piezas.find((p) => p.id === item.piezaId);
     return pieza !== undefined && !pieza.archivada;
   });

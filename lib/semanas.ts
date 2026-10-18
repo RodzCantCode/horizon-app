@@ -179,7 +179,7 @@ export function estadoDePieza(p: PiezaDePlan, hoy: string): string {
   return aviso ? `${estado} · ${TEXTO_AVISO[aviso]}` : estado;
 }
 
-const FORMATOS: Record<Formato, string> = { reel: 'Reel', slide: 'Slide' };
+const FORMATOS: Record<Formato, string> = { reel: 'Reel', slide: 'Carrusel' };
 const CANALES: Record<Canal, string> = { ig: 'Instagram', tiktok: 'TikTok', shorts: 'Shorts' };
 
 export function textoFormato(formato: Formato): string {

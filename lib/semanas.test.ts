@@ -261,7 +261,7 @@ describe('estadoDePieza', () => {
 describe('textos de los datos de una pieza', () => {
   it('formato, canales y días de preparación', () => {
     expect(textoFormato('reel')).toBe('Reel');
-    expect(textoFormato('slide')).toBe('Slide');
+    expect(textoFormato('slide')).toBe('Carrusel');
     expect(textoCanales(['ig', 'tiktok', 'shorts'])).toBe('Instagram · TikTok · Shorts');
     expect(textoCanales(['tiktok'])).toBe('TikTok');
     expect(textoPreparacion(1)).toBe('1 día');

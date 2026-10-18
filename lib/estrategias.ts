@@ -3,18 +3,11 @@
 // Sin acceso a datos: recibe las estrategias y las piezas ya leídas (`lib/datos/estrategias.ts`).
 
 import { diaPermitido, estrategiaDisponible } from '@/lib/planes';
-import { posicionRespectoAD, textoCanales, textoPreparacion } from '@/lib/semanas';
-import type { Estrategia, Formato, Pieza } from '@/lib/tipos';
+import { posicionRespectoAD, textoCanales, textoFormato, textoPreparacion } from '@/lib/semanas';
+import type { Estrategia, Pieza } from '@/lib/tipos';
 
 /** Lo que lleva la URL (`?estrategia=nueva`, `?pieza=nueva`) para abrir el panel de crear una. */
 export const NUEVA = 'nueva';
-
-const NOMBRES_FORMATO: Record<Formato, string> = { slide: 'Carrusel', reel: 'Reel' };
-
-/** El formato como se elige al editar una pieza: «Carrusel» o «Reel». */
-export function textoFormatoPieza(formato: Formato): string {
-  return NOMBRES_FORMATO[formato];
-}
 
 /**
  * Los días en que puede ir una pieza, de D-1 a D+5. Tres o más seguidos van como un tramo:
@@ -43,7 +36,7 @@ export function textoDias(dias: number[]): string {
  */
 export function resumenPieza(p: Pieza): string {
   return [
-    textoFormatoPieza(p.formato),
+    textoFormato(p.formato),
     p.canales.map((c) => textoCanales([c])).join(', '),
     textoDias(p.diasPermitidos),
     `${textoPreparacion(p.diasPreparacion)} de preparación`,
@@ -58,11 +51,13 @@ function enumerar(nombres: string[]): string {
 }
 
 /**
- * Por qué no se ofrece una estrategia al planificar: las piezas archivadas que usa, cada una una
- * vez («No disponible: Teaser está archivada»). `null` si se puede usar (`estrategiaDisponible`).
+ * Por qué no se ofrece una estrategia al planificar: que no tiene piezas, o las archivadas que usa,
+ * cada una una vez («No disponible: Teaser está archivada»). `null` si se puede usar
+ * (`estrategiaDisponible`).
  */
 export function motivoNoDisponible(e: Estrategia, piezas: Pieza[]): string | null {
   if (estrategiaDisponible(e, piezas)) return null;
+  if (e.items.length === 0) return 'No disponible: no tiene piezas';
   const archivadas = piezas.filter((p) => p.archivada && e.items.some((i) => i.piezaId === p.id));
   // Una pieza en uso no se puede borrar (la base lo impide); si aun así falta, se dice.
   if (archivadas.length === 0) return 'No disponible: usa una pieza que ya no existe';

@@ -111,7 +111,45 @@ describe('guardarEstrategia', () => {
     tablas.set('piezas', filasPiezas({ t4: { archivada: true } }));
 
     expect(await guardarEstrategia({ ...e1, nombre: 'E1 · Renombrada' })).toEqual({});
-    expect(itemsDe('e1')).toContainEqual(['t4', -1]);
+    expect(filaDe('estrategias', 'e1')).toHaveProperty('nombre', 'E1 · Renombrada');
+    // Se ha vuelto a escribir con la pieza archivada dentro, no se ha quedado como estaba.
+    expect(escrituras.map(({ tabla, operacion }) => [tabla, operacion])).toEqual([
+      ['estrategias', 'update'],
+      ['estrategia_piezas', 'delete'],
+      ['estrategia_piezas', 'insert'],
+    ]);
+    expect(itemsDe('e1')).toEqual([['t4', -1], ['rp', 0], ['rc', 2], ['t2', 4], ['rc', 5]]);
+  });
+
+  it('no deja añadir una pieza archivada que no tenía, y refresca', async () => {
+    // El teaser se archivó mientras alguien editaba E1 y lo añade al guardar.
+    tablas.set('piezas', filasPiezas({ rt: { archivada: true } }));
+
+    expect(await guardarEstrategia({ ...e1, items: [...e1.items, ...items(['rt', -1])] })).toEqual({
+      error: 'Esa pieza está archivada',
+    });
+    expect(escrituras).toEqual([]);
+    expect(itemsDe('e1')).toEqual([['t4', -1], ['rp', 0], ['rc', 2], ['t2', 4], ['rc', 5]]);
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('una nueva no puede llevar ninguna pieza archivada', async () => {
+    tablas.set('piezas', filasPiezas({ rt: { archivada: true } }));
+
+    expect(await guardarEstrategia({ nombre: 'E5', conEpisodio: true, items: items(['rt', -1]) })).toEqual({
+      error: 'Esa pieza está archivada',
+    });
+    expect(escrituras).toEqual([]);
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('la misma pieza dos veces el mismo día no se guarda', async () => {
+    expect(await guardarEstrategia({ ...e1, items: items(['rp', 0], ['rc', 2], ['rp', 0]) })).toEqual({
+      error: 'Esa pieza ya está en ese día',
+    });
+    expect(escrituras).toEqual([]);
+    // En días distintos, sí (E1 lleva el clip secundario en D+2 y D+5).
+    expect(await guardarEstrategia(e1)).toEqual({});
   });
 
   it('si la estrategia ya no existe, lo dice, refresca y no toca piezas', async () => {

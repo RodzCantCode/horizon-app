@@ -229,12 +229,21 @@ describe('estrategiaDisponible', () => {
   it('deja de estarlo si alguna de sus piezas ya no existe', () => {
     expect(estrategiaDisponible(e1, piezasDePrueba().filter((p) => p.id !== 'rc'))).toBe(false);
   });
+
+  it('una estrategia sin piezas no está disponible', () => {
+    expect(estrategiaDisponible({ ...e1, items: [] }, piezasDePrueba())).toBe(false);
+  });
 });
 
 describe('estrategiasParaPlanificar', () => {
   it('no ofrece las estrategias que usan una pieza archivada', () => {
     const conT4Archivada = piezasDePrueba().map((p) => (p.id === 't4' ? { ...p, archivada: true } : p));
     expect(estrategiasParaPlanificar([e1, e2], conT4Archivada, true).map((e) => e.id)).toEqual(['e2']);
+  });
+
+  it('no ofrece las estrategias sin piezas (generarían un plan vacío)', () => {
+    const vacia = { ...e1, id: 'vacia', items: [] };
+    expect(estrategiasParaPlanificar([vacia, e2], piezasDePrueba(), true).map((e) => e.id)).toEqual(['e2']);
   });
 
   it('filtra por semana con o sin episodio', () => {

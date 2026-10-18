@@ -22,6 +22,8 @@ const FALTA_NOMBRE = 'Falta el nombre';
 const FALTA_NOMBRE_CORTO = 'Falta el nombre corto';
 const SIN_PIEZAS = 'Pon al menos una pieza';
 const DIA_NO_PERMITIDO = 'Esa pieza no puede ir ese día';
+const PIEZA_REPETIDA = 'Esa pieza ya está en ese día';
+const PIEZA_ARCHIVADA = 'Esa pieza está archivada';
 const ESTRATEGIA_NO_EXISTE = 'Esa estrategia ya no existe';
 const PIEZA_NO_EXISTE = 'Esa pieza ya no existe';
 const FORMATO_NO_VALIDO = 'Elige el formato';
@@ -36,9 +38,12 @@ const DIA_EN_USO = 'Una estrategia la usa en un día que quitas: cámbiala antes
 /**
  * Crea una estrategia (sin `id`) o cambia una que ya existe: su nombre, si es para semanas con o
  * sin episodio y sus piezas en cada día. Hace falta nombre y al menos una pieza; cada pieza tiene
- * que existir y admitir su día (`diaPermitido`), de D-1 a D+5. Una pieza archivada que la estrategia
- * ya tenía puede seguir en ella (la estrategia sigue sin ofrecerse al planificar); el panel solo
- * ofrece añadir las que no lo están.
+ * que existir, admitir su día (`diaPermitido`), de D-1 a D+5, y no repetirse en el mismo día.
+ *
+ * Una pieza archivada no se puede añadir: una nueva no puede llevar ninguna y, al editar, solo
+ * pueden seguir las que la estrategia ya tenía (la estrategia sigue sin ofrecerse al planificar).
+ * El panel solo ofrece las no archivadas, pero otra persona puede archivar una mientras se edita:
+ * entonces lo dice y refresca, para que el panel la marque.
  *
  * Las piezas se sustituyen enteras: se borran las filas de estrategia_piezas de esa estrategia (y
  * solo esas) y se ponen las nuevas.
@@ -52,10 +57,21 @@ export async function guardarEstrategia(
   if (e.items.some((item) => !DESPLAZAMIENTOS.includes(item.desplazamiento))) {
     return { error: DIA_NO_PERMITIDO };
   }
+  const repetida = e.items.some((item, i) =>
+    e.items.some((otro, j) => j < i && otro.piezaId === item.piezaId && otro.desplazamiento === item.desplazamiento),
+  );
+  if (repetida) return { error: PIEZA_REPETIDA };
 
+  // Las piezas de la base y, al editar, las que la estrategia ya tiene (para saber qué archivadas
+  // pueden seguir en ella).
   const supabase = await crearClienteServidor();
-  const leidas = await supabase.from('piezas').select('*');
-  if (leidas.error) return { error: NO_GUARDADO };
+  const [leidas, actuales] = await Promise.all([
+    supabase.from('piezas').select('*'),
+    e.id === undefined
+      ? Promise.resolve({ data: [] as { pieza_id: string }[], error: null })
+      : supabase.from('estrategia_piezas').select('pieza_id').eq('estrategia_id', e.id),
+  ]);
+  if (leidas.error || actuales.error) return { error: NO_GUARDADO };
   let piezas: Pieza[];
   try {
     piezas = leidas.data.map(aPieza);
@@ -63,12 +79,17 @@ export async function guardarEstrategia(
     // aPieza lanza si una fila trae un formato o un canal que la app no conoce.
     return { error: NO_GUARDADO };
   }
+  const yaTenia = new Set(actuales.data.map((a) => a.pieza_id));
 
   for (const item of e.items) {
     const pieza = piezas.find((p) => p.id === item.piezaId);
     if (!pieza) {
       refresh();
       return { error: PIEZA_NO_EXISTE };
+    }
+    if (pieza.archivada && !yaTenia.has(pieza.id)) {
+      refresh();
+      return { error: PIEZA_ARCHIVADA };
     }
     if (!diaPermitido(pieza, item.desplazamiento)) return { error: DIA_NO_PERMITIDO };
   }
@@ -96,8 +117,10 @@ export async function guardarEstrategia(
   );
   // Son llamadas sueltas, sin transacción (no hay una función de la base que lo haga de una vez): si
   // esto falla, la estrategia se queda sin piezas (o, si era nueva, creada sin ellas) hasta que se
-  // vuelva a guardar. Con tres personas y sin conexión cortada a mitad, se acepta; se refresca para
-  // que la página enseñe cómo ha quedado.
+  // vuelva a guardar; una nueva, al guardarla otra vez, se crea de nuevo. Una estrategia sin piezas
+  // no se ofrece al planificar (`estrategiaDisponible`), así que no puede dar un plan vacío, y en la
+  // sección sale «No disponible». Con tres personas y sin conexión cortada a mitad, se acepta; se
+  // refresca para que la página enseñe cómo ha quedado.
   if (error) {
     refresh();
     return { error: NO_GUARDADO };

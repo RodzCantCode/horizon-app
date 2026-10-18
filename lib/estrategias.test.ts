@@ -6,7 +6,6 @@ import {
   preguntaArchivar,
   resumenPieza,
   textoDias,
-  textoFormatoPieza,
 } from '@/lib/estrategias';
 import type { Estrategia, Pieza } from '@/lib/tipos';
 
@@ -32,13 +31,6 @@ function estrategia(id: string, nombre: string, conEpisodio: boolean, items: [st
 const e1 = estrategia('e1', 'E1 · Anticipación fuerte', true, [['t4', -1], ['rp', 0], ['rc', 2], ['t2', 4], ['rc', 5]]);
 const e2 = estrategia('e2', 'E2 · Valor primero', true, [['rt', -1], ['rp', 0], ['t2', 1], ['t3', 4], ['rc', 5]]);
 const e3 = estrategia('e3', 'E3 · Recopilación', false, [['t3', -1], ['t1', 5]]);
-
-describe('textoFormatoPieza', () => {
-  it('llama Carrusel a las slide y Reel a los reel', () => {
-    expect(textoFormatoPieza('slide')).toBe('Carrusel');
-    expect(textoFormatoPieza('reel')).toBe('Reel');
-  });
-});
 
 describe('textoDias', () => {
   it('pone los días sueltos uno a uno, de D-1 a D+5', () => {
@@ -74,6 +66,10 @@ describe('motivoNoDisponible', () => {
     expect(
       motivoNoDisponible(e1, piezasDePrueba({ t4: { archivada: true }, rc: { archivada: true } })),
     ).toBe('No disponible: T4 · Historia del invitado y Clip secundario están archivadas');
+  });
+
+  it('una estrategia sin piezas tampoco está disponible, y lo dice', () => {
+    expect(motivoNoDisponible({ ...e1, items: [] }, piezasDePrueba())).toBe('No disponible: no tiene piezas');
   });
 
   it('si una de sus piezas ya no existe, también lo dice', () => {

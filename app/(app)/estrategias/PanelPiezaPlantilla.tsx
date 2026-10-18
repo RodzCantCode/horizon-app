@@ -2,9 +2,9 @@
 
 import { useRef, useState, type FormEvent } from 'react';
 import { Button, Checkbox, PencilIcon, RadioGroup, TextField } from 'mochi-ui';
-import { NUEVA, preguntaArchivar, textoDias, textoFormatoPieza } from '@/lib/estrategias';
+import { NUEVA, preguntaArchivar, textoDias } from '@/lib/estrategias';
 import { DESPLAZAMIENTOS } from '@/lib/planes';
-import { posicionRespectoAD, textoCanales, textoPreparacion } from '@/lib/semanas';
+import { posicionRespectoAD, textoCanales, textoFormato, textoPreparacion } from '@/lib/semanas';
 import { CANALES, FORMATOS, type Canal, type Formato, type Pieza } from '@/lib/tipos';
 import { BotonesGuardar, useEnvio } from '../componentes/edicion';
 import { Panel, useFocoAlCambiarDeVista, usePanelDeLaUrl } from '../componentes/Panel';
@@ -72,7 +72,7 @@ function VerPieza({ pieza, usadaEn, alEditar }: { pieza: Pieza; usadaEn: string[
           <dt>Nombre corto</dt>
           <dd>{pieza.nombreCorto}</dd>
           <dt>Formato</dt>
-          <dd>{textoFormatoPieza(pieza.formato)}</dd>
+          <dd>{textoFormato(pieza.formato)}</dd>
           <dt>Canales</dt>
           <dd>{textoCanales(pieza.canales)}</dd>
           <dt>Días</dt>
@@ -224,7 +224,7 @@ function EditarPieza({
       <RadioGroup
         label="Formato"
         orientation="horizontal"
-        options={FORMATOS.map((f) => ({ value: f, label: textoFormatoPieza(f) }))}
+        options={FORMATOS.map((f) => ({ value: f, label: textoFormato(f) }))}
         value={formato}
         onValueChange={(valor) => setFormato(FORMATOS.find((f) => f === valor) ?? formato)}
       />

@@ -13,7 +13,8 @@
 //     return { crearClienteServidor: async () => clienteSimulado };
 //   });
 //
-// y la vacía antes de cada prueba con `vaciarBase()`. Las funciones de dentro leen `tablas`,
+// y la prepara antes de cada prueba con `prepararBase()` (vacía y con las piezas y estrategias del
+// prototipo) o `vaciarBase()` (vacía del todo). Las funciones de dentro leen `tablas`,
 // `fallos` y `rpc` al llamarse, no al definirse. Solo la usan las pruebas.
 
 import type { Tables } from '@/lib/supabase/tipos';
