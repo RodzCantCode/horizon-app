@@ -1,6 +1,7 @@
 # Diseño de la app
 
-> **Actualizado:** 2026-10-16. Diseño acordado con Mario en sesión, antes de construir las pantallas.
+> **Actualizado:** 2026-10-18. Diseño acordado con Mario en sesión antes de construir las pantallas,
+> con lo que se ajustó al construirlas (rama `app-v1`).
 > Maqueta de la pantalla principal: https://claude.ai/artifact/TScsm8f4QkSyBozqYzoNRv (privada).
 > El prototipo (`prototipo/index.html`) es referencia del modelo, no de la interfaz.
 
@@ -24,42 +25,54 @@ conecta con las redes y publica. La app no publica en redes.
 
 ### Semanas (la principal)
 
-Una sola pantalla con las semanas en orden, de lunes a domingo. Sin menús que elegir.
+Una sola pantalla con las semanas en orden, de lunes a domingo. Sin menús que elegir. Pinta cuatro:
+la pasada, la actual, la siguiente y una lejana (una semana atrás y dos delante).
 
 - **La semana actual, abierta.** Encabezado con fechas y, si hay episodio, número, invitado y tema.
-  Debajo, los siete días en fila (en móvil, en lista). Cada día muestra sus piezas con la hora y el
-  nombre corto, y una marca: hueca si está pendiente, rellena si está programada, ámbar si va justa
-  o hay que revisarla. Hoy, resaltado.
+  Debajo, los siete días en fila (por debajo de 1024 px de ancho, en lista). Cada día muestra sus
+  piezas con la hora y el nombre corto, y una marca: hueca si está pendiente, rellena si está
+  programada, ámbar si va justa o hay que revisarla. Hoy, resaltado.
 - **La semana siguiente, debajo.** Si tiene plan, igual pero más tenue. Si no, «Sin planificar» y el
   botón **Planificar**: es la única acción principal (azul) de la pantalla. Puede mostrar piezas que
   caen en ella desde el plan de la semana anterior.
-- **Semanas pasadas y lejanas:** una línea plegada cada una; se abren al pulsarlas.
+- **Semanas pasadas y lejanas:** una línea plegada cada una; se abren al pulsarlas. Con plan, llevan
+  **Ver la semana**, que abre su panel.
+- **Planificar** sale también, en superficie, en la semana actual sin plan y en la lejana sin plan
+  al desplegarla. Una pasada no se planifica.
 - Solo se avisa de la **semana siguiente** sin plan. Planificar más lejos se puede, no se exige.
 
 ### Paneles de detalle
 
-Todo el detalle se abre en el mismo sitio: un panel a la derecha (en móvil, una hoja desde abajo).
-Nada se edita en la pantalla principal; fuera del modo edición solo se cambia el estado de una pieza.
+Todo el detalle se abre en el mismo sitio: un panel a la derecha (por debajo de 768 px, una hoja
+desde abajo). Es modal: el fondo se atenúa y, al tocarlo, el panel se cierra. Nada se edita en la
+pantalla principal; fuera del modo edición solo se cambia el estado de una pieza.
 
 - **Pieza** (al pulsarla): nombre, fecha y hora, posición respecto al episodio (D-1…D+5), episodio,
   formato, canales, días de preparación, estado y su registro. Botón principal: **Marcar como
-  programada** / **Volver a pendiente**.
+  programada**. Si ya lo está, **Volver a pendiente**, en superficie: devolverla es la excepción.
   Con el lápiz: cambiar día y hora, o quitarla de este plan (pide confirmación).
 - **Semana** (al pulsar su encabezado): datos del episodio, estrategia usada y sus piezas.
-  Con el lápiz: editar los datos del episodio, añadir una pieza suelta, cambiar la estrategia
-  (regenera las piezas y avisa si alguna estaba programada) y mover la semana entera de fecha.
+  Con el lápiz: editar los datos del episodio (el número es obligatorio), añadir una pieza suelta,
+  cambiar la estrategia (regenera las piezas y avisa si alguna estaba programada) y mover la semana
+  entera de fecha, solo dentro de las semanas que pinta la portada (más allá, el plan dejaría de
+  verse).
 - El modo edición termina con **Guardar** o **Cancelar**. Los cambios afectan solo a ese plan, nunca
   a la estrategia ni a la pieza de origen.
+- **Panel desfasado.** Si otra persona cambia algo con el panel abierto, al guardar no se pisa su
+  cambio: si la pieza ya no está en el día y la hora que enseñaba el panel, o la semana tiene otro
+  día D, no se guarda, se avisa («La pieza ha cambiado…», «La semana ha cambiado…», con «Revisa y
+  vuelve a guardar») y el panel se pone al día. Si la pieza o el plan ya no existen, lo dice.
 
 ### Planificar
 
 **Planificar** abre el panel con tres pasos en una vista:
 
 1. ¿Hay episodio? Sí / No (marcado Sí por defecto).
-2. Si lo hay: número (propuesto: el siguiente al último), día de publicación (propuesto: el mismo día
-   de la semana que el último episodio), invitado y tema (pueden quedar vacíos).
-3. Estrategia: solo las del tipo que toca (con o sin episodio) y que no usen piezas archivadas, cada
-   una con su mini fila de días.
+2. Si lo hay: número (obligatorio; propuesto: el siguiente al último), día de publicación
+   (propuesto: el mismo día de la semana que el último episodio), invitado y tema (pueden quedar
+   vacíos).
+3. Estrategia: solo las del tipo que toca (con o sin episodio) que estén disponibles (con piezas y
+   ninguna archivada), cada una con su mini fila de días.
 
 Debajo, vista previa con las piezas, sus fechas y horas reales, y el botón **Crear plan**.
 
@@ -68,17 +81,21 @@ Debajo, vista previa con las piezas, sus fechas y horas reales, y el botón **Cr
 Segunda sección de la cabecera (junto a **Semanas**). Contiene:
 
 - **Estrategias**, en «Con episodio» y «Sin episodio», con su mini fila de días. Al editar una, se
-  ponen o quitan piezas en cada día de D-1 a D+5; una pieza solo entra en los días que admite. Una
-  estrategia que usa una pieza archivada se marca «no disponible» y no se ofrece al planificar.
-- **Piezas**: nombre, nombre corto, formato, canales, días permitidos, días de preparación y hora
-  habitual. Se **archivan, no se borran**; las archivadas, plegadas al final, se pueden recuperar.
+  ponen o quitan piezas en cada día de D-1 a D+5; una pieza solo entra en los días que admite y no
+  se repite en el mismo día. Una estrategia sin piezas o que usa una pieza archivada se marca «no
+  disponible» y no se ofrece al planificar.
+- **Piezas**: nombre, nombre corto, formato (Carrusel o Reel), canales, días permitidos, días de
+  preparación y hora habitual. A una pieza no se le puede quitar un día en el que la usa una
+  estrategia: antes hay que cambiar la estrategia. Se **archivan, no se borran**; las archivadas,
+  plegadas al final, se pueden recuperar.
 
 Editar estrategias o piezas **nunca cambia los planes ya creados**.
 
 ### Ajustes
 
 Icono de cuenta arriba a la derecha. Solo lo que es de la app, no de la planificación: tema
-(**claro, oscuro o sistema**), **Cambiar contraseña** y **Salir**.
+(**claro, oscuro o sistema**), **Cambiar contraseña** y **Salir** (cierra la sesión solo en este
+dispositivo).
 
 ### Acceso: solo por invitación
 
@@ -108,7 +125,7 @@ Supabase (plantillas de correo y direcciones permitidas) están en [acceso.md](a
   momento exacto se calcula con las reglas de `Europe/Madrid` cuando haga falta (por ejemplo, al
   mandarlo a Metricool). Nunca se guarda una hora fija en UTC.
 - La hora puede quedar vacía. Cada pieza tiene una **hora habitual** que la copia hereda al
-  planificar.
+  planificar. En los campos, la hora se escribe como texto «hh:mm».
 - Si una hora no existe por el cambio de horario (de 2:00 a 3:00 la noche de marzo), la app avisa.
 - La hora de la app es la prevista; mientras no haya conexión, la real es la de Metricool y la app
   no se entera si allí se cambia.

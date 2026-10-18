@@ -44,7 +44,7 @@ publica en redes. **Pantallas, estados, horas y datos: [docs/diseno.md](docs/dis
 
 | Entidad | Qué es |
 | --- | --- |
-| Pieza | Tipo de contenido (T0–T4, clip principal, clip secundario, teaser, clip de archivo): formato (Slide o Reel), si necesita episodio, días permitidos respecto al episodio, días de preparación y canales |
+| Pieza | Tipo de contenido (T0–T4, clip principal, clip secundario, teaser, clip de archivo): nombre corto, formato (Carrusel o Reel), canales, días permitidos respecto al episodio, días de preparación y hora habitual |
 | Estrategia | Combinación de piezas en días concretos (D-1 a D+5), para semana con o sin episodio |
 | Plan | Episodio (o semana sin episodio) + estrategia elegida. Al generarse guarda una **copia fija** de las piezas con su fecha y hora reales y su estado (pendiente o programada) |
 
@@ -87,35 +87,20 @@ contenido, no con una app con login y datos que cambian.
 
 ## Estado
 
-9-oct-2026: `index.html` es el **prototipo** (HTML estático, datos en `localStorage` del navegador de
-cada uno). Sirve para validar el flujo con 2–3 episodios reales. Todavía no es compartido.
+18-oct-2026: la app está construida en la rama `app-v1` (Tareas 0–11 de
+[docs/plan-construccion.md](docs/plan-construccion.md)). Cada push a `app-v1` publica una vista
+previa en Vercel; `main` sigue sirviendo el prototipo y se junta solo con el OK de Mario (publica en
+producción). Falta:
 
-14-oct-2026: creados el repo de GitHub y el proyecto de Supabase («Horizon Sport - App», organización
-«Horizon Sport», plan gratuito, Europa). Supabase pausa los proyectos gratuitos tras una semana sin
-uso: se reactivan desde el panel sin perder datos.
+1. La prueba con sesión: el recorrido completo con un usuario real (Tarea 12).
+2. Que el correo de invitación llegue a Izan y Lluís ([docs/acceso.md § Requisitos
+   previos](docs/acceso.md#requisitos-previos)).
+3. Antes de usarla con datos reales, una copia periódica de los datos fuera de Supabase (el plan
+   gratuito no da copias que Mario pueda restaurar).
 
-15-oct-2026: proyecto de Vercel `horizon-app` (equipo `Rodz`, plan Hobby) enlazado al repo. Cada push
-a `main` publica solo; hoy publica el prototipo, que no guarda nada fuera del navegador.
-
-15-oct-2026: probado el prototipo. El flujo (piezas → estrategias → plan) funciona, pero la
-navegación entre menús y pestañas confunde. La app de Next.js **empieza de cero en diseño**: el
-prototipo queda como referencia del modelo, no de la interfaz.
-
-15-oct-2026: **esqueleto de la app de Next.js** en la raíz del repo, sin commit todavía. El
-prototipo pasa a `prototipo/index.html` (no se sirve; se abre a mano en el navegador). Hay login con
-Supabase Auth (correo y contraseña, sin registro) y una portada protegida casi vacía con el correo y
-«Salir». Sin tablas todavía. Probado en local sin usuarios: `/` manda a `/entrar` y `/entrar` carga;
-el inicio de sesión real no se ha probado. Falta, a mano: crear los 3 usuarios en Supabase
-(Authentication → Users), desactivar el registro público, poner las dos variables de `.env.example`
-en el proyecto de Vercel y comprobar que su Framework Preset es Next.js (se creó cuando el repo era
-HTML estático).
-
-18-oct-2026: acceso **solo por invitación** (nadie crea usuarios a mano ni hay registro): Mario
-invita desde Supabase y el correo lleva a **Crea tu contraseña**. Lo que hay que configurar en
-Supabase antes de la primera invitación: [docs/acceso.md](docs/acceso.md).
-
-Siguiente paso previsto: datos compartidos en **Supabase** (RLS en todas las tablas). No se programa un
-login propio.
+Supabase: proyecto «Horizon Sport - App» (organización «Horizon Sport», plan gratuito, Europa);
+Supabase pausa los proyectos gratuitos tras una semana sin uso y se reactivan desde el panel sin
+perder datos. Vercel: proyecto `horizon-app` (equipo `Rodz`, plan Hobby), enlazado al repo.
 
 ## Diseño
 
@@ -150,6 +135,11 @@ Node 22 (`.nvmrc`; en Vercel lo fija `engines` de `package.json`).
 | `npm run dev` | Servidor de desarrollo en http://localhost:3000 |
 | `npm run build` | Compilación de producción (la misma que hace Vercel) |
 | `npm run lint` | ESLint |
+| `npm test` | Pruebas de `lib/` y de las acciones de servidor (Vitest), sin red: las acciones hablan con la base simulada de `lib/pruebas/` |
+
+Las pruebas de la base, `supabase/pruebas/*.sql`, se ejecutan enteras con `execute_sql` de
+`supabase-horizon`, siempre dentro de `begin … rollback` (ya lo llevan): devuelven una fila por
+comprobación.
 
 Antes de `npm run dev`, copia `.env.example` como `.env.local` y rellénalo (URL del proyecto y clave
 publicable; las dos son públicas por diseño). `.env.local` no se sube. La clave secreta
@@ -162,13 +152,17 @@ publicable; las dos son públicas por diseño). `.env.local` no se sube. La clav
 | `app/layout.tsx` | Raíz: fuente, estilos de Mochi y el guion que pone el tema elegido antes de pintar (claro, oscuro o sistema: `lib/tema.ts`) |
 | `app/global.css` | Tokens de Horizon (tema oscuro y claro) y variables de Mochi |
 | `app/(app)/` | Lo que va con cabecera (Semanas `/`, Estrategias, Ajustes). Semanas es `page.tsx` con sus componentes en `semanas/`: pulsar una pieza abre su panel (`?pieza=<id>` en la URL: estado y registro, sobrevive a una recarga); **Planificar** abre el de planificar esa semana (`?planificar=<lunes>`: datos del episodio, estrategia con su mini fila, vista previa y **Crear plan**); el encabezado de una semana con plan abre el suyo (`?semana=<lunes>`: episodio, estrategia y piezas). En los paneles de pieza y de semana, el lápiz pasa a modo edición (estado del panel, no va en la URL). Acciones de servidor en `semanas/acciones.ts`. Estrategias es `estrategias/page.tsx`: estrategias con su mini fila y piezas (archivadas plegadas al final); cada una abre su panel (`?estrategia=<id>`, `?pieza=<id>`; con `=nueva`, el de crear una), con lápiz y, en las piezas, **Archivar**/**Recuperar**. Acciones en `estrategias/acciones.ts`. Si una lectura falla, `error.tsx` |
-| `app/(app)/componentes/` | `Panel.tsx`: el panel de detalle de todas las pantallas (Drawer de Mochi a la derecha; por debajo de 768 px, su Dialog en hoja) y `usePanelDeLaUrl` (abrirlo y cerrarlo con un parámetro de la URL); `edicion.tsx`: el envío de las acciones del modo edición (`useEnvio`) y **Guardar**/**Cancelar** |
+| `app/(app)/componentes/` | `Panel.tsx`: el panel de detalle de todas las pantallas (Drawer de Mochi a la derecha; por debajo de 768 px, su Dialog en hoja) y `usePanelDeLaUrl` (abrirlo y cerrarlo con un parámetro de la URL; lo usan los de Estrategias, los de Semanas llevan su propia copia); `edicion.tsx`: el envío de las acciones del modo edición (`useEnvio`) y **Guardar**/**Cancelar** |
 | `app/entrar/` | `/entrar`: correo y contraseña. Sin registro: solo por invitación |
 | `app/auth/confirmar/`, `app/crear-contrasena/` | Adonde lleva el enlace de los correos de invitación y recuperación, y **Crea tu contraseña**. Lo que se configura en Supabase: [docs/acceso.md](docs/acceso.md) |
 | `proxy.ts` | Corre antes de cada ruta (en Next.js 16 el `middleware` se llama `proxy`): refresca la sesión y decide adónde va cada uno (`lib/supabase/rutas.ts`) |
 | `lib/supabase/` | Clientes de Supabase con `@supabase/ssr`: `navegador.ts`, `servidor.ts` y `sesion.ts` (el del proxy); `rutas.ts`, qué rutas piden sesión |
+| `lib/*.ts` | Lógica sin pantalla ni base de datos, con sus pruebas al lado (`*.test.ts`): `fechas.ts` (días y horas en `Europe/Madrid`), `planes.ts` (generar un plan, va justa, mover, propuestas), `semanas.ts` (qué semanas se ven y los textos de Semanas), `estrategias.ts` (los de Estrategias), `tema.ts`, `contrasena.ts`; los tipos, en `tipos.ts` |
 | `lib/datos/` | Lecturas de Supabase en el servidor. Pasan las filas de la base (snake_case) a los tipos de `lib/tipos.ts`, y al revés lo que se manda a la base (`crear_plan`, `cambiar_estrategia`, una pieza suelta): las pantallas y la lógica de `lib/` no ven las de la base |
 | `lib/pruebas/baseSimulada.ts` | Base de datos en memoria que sustituye al cliente de Supabase en las pruebas de las acciones de servidor, con las piezas y estrategias del prototipo |
+| `supabase/migrations/` | Las migraciones aplicadas, con la versión que registró `apply_migration` |
+| `supabase/pruebas/` | Pruebas de la base en SQL: `seguridad.sql` (RLS y registro) y `funciones.sql` (`crear_plan`, `mover_plan`, `cambiar_estrategia`) |
+| `docs/plan-construccion.md` | El plan por tareas con que se construyó, y lo que queda (Tarea 12) |
 | `docs/acceso.md` | Cómo invitar, cómo mandar una recuperación y qué configurar en Supabase |
 | `prototipo/index.html` | Prototipo de octubre: referencia del modelo, no de la interfaz. No se sirve |
 | `AGENTS.md` | Lo escribe `next dev`: avisa a los agentes de que lean la documentación de Next que viene en `node_modules/next/dist/docs/`. No se edita a mano |

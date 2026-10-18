@@ -58,14 +58,15 @@ acciones de servidor (`'use server'`).
 
 ### Tarea 0: Lo que hace Mario a mano (sin código)
 
-- [ ] Vercel, proyecto `horizon-app`: variables `NEXT_PUBLIC_SUPABASE_URL` y
+- [x] Vercel, proyecto `horizon-app`: variables `NEXT_PUBLIC_SUPABASE_URL` y
   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en Production y Preview; Framework Preset = Next.js; Node
   22.x.
-- [ ] Supabase: desactivar «Allow new users to sign up». Los usuarios llegan por invitación tras la
+- [x] Supabase: desactivar «Allow new users to sign up». Los usuarios llegan por invitación tras la
   Tarea 5 (ver `docs/acceso.md`).
-- [ ] Con eso hecho, Claude crea la rama `app-v1` desde `main`, hace commit del esqueleto, el diseño
+- [x] Con eso hecho, Claude crea la rama `app-v1` desde `main`, hace commit del esqueleto, el diseño
   y este plan, y la sube. Comprobar en la vista previa de Vercel que se puede entrar y salir con un
-  usuario real.
+  usuario real. Hecho salvo esto último: no se crean usuarios a mano, llegan por invitación, y la
+  comprobación con un usuario real pasa a la Tarea 12 (paso 4).
 
 ### Tarea 1: Fechas en hora de España
 
@@ -82,7 +83,7 @@ acciones de servidor (`'use server'`).
   - `existeEnMadrid(fecha: string, hora: string): boolean`
   - `diaSemana(fecha: string): number` (0 = lunes … 6 = domingo)
 
-- [ ] **Paso 1: tests que fallan**
+- [x] **Paso 1: tests que fallan**
 
 ```ts
 expect(lunesDe('2026-10-16')).toBe('2026-10-12');
@@ -101,13 +102,13 @@ expect(existeEnMadrid('2026-10-16', '18:00')).toBe(true);
 expect(diaSemana('2026-10-16')).toBe(4);
 ```
 
-- [ ] **Paso 2:** `npm test -- lib/fechas` → falla porque `lib/fechas.ts` no existe.
-- [ ] **Paso 3:** implementar. Aritmética de días en UTC puro sobre `Date.UTC(año, mes, día)`;
+- [x] **Paso 2:** `npm test -- lib/fechas` → falla porque `lib/fechas.ts` no existe.
+- [x] **Paso 3:** implementar. Aritmética de días en UTC puro sobre `Date.UTC(año, mes, día)`;
   `hoyEnMadrid` y `existeEnMadrid` con `Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' })`.
   `existeEnMadrid`: probar los dos desfases posibles (+1 h y +2 h) y comprobar si alguno, al volver a
   formatear en Madrid, da la misma fecha y hora. Sin dependencias nuevas aparte de Vitest.
-- [ ] **Paso 4:** `npm test -- lib/fechas` → pasa. `npm run lint` → sin errores.
-- [ ] **Paso 5:** commit «Fechas y horas en hora de España».
+- [x] **Paso 4:** `npm test -- lib/fechas` → pasa. `npm run lint` → sin errores.
+- [x] **Paso 5:** commit «Fechas y horas en hora de España».
 
 ### Tarea 2: Lógica de planes
 
@@ -135,7 +136,7 @@ expect(diaSemana('2026-10-16')).toBe(4);
   - `proponerNumero(planes: Plan[]): string | null`
   - `proponerDiaD(planes: Plan[], lunes: string): string`
 
-- [ ] **Paso 1: tests que fallan** (datos de prueba: las piezas y E1 del prototipo, con
+- [x] **Paso 1: tests que fallan** (datos de prueba: las piezas y E1 del prototipo, con
   `horaHabitual: '18:00'` en el clip principal)
 
 ```ts
@@ -175,12 +176,12 @@ expect(proponerDiaD([{ ...plan, conEpisodio: true, diaD: '2026-10-16' }], '2026-
 expect(proponerDiaD([], '2026-10-19')).toBe('2026-10-23'); // sin historial: viernes
 ```
 
-- [ ] **Paso 2:** `npm test -- lib/planes` → falla.
-- [ ] **Paso 3:** implementar. `generarPiezasDePlan` ordena por fecha y hora (las vacías al final del
+- [x] **Paso 2:** `npm test -- lib/planes` → falla.
+- [x] **Paso 3:** implementar. `generarPiezasDePlan` ordena por fecha y hora (las vacías al final del
   día). `proponerNumero` toma el mayor numérico de los planes con episodio y suma 1, conservando dos
   cifras. `proponerDiaD` usa el día de la semana del último plan con episodio; si no hay, viernes.
-- [ ] **Paso 4:** `npm test` → pasa. `npm run lint` → sin errores.
-- [ ] **Paso 5:** commit «Lógica de planes: generar, va justa, mover y propuestas».
+- [x] **Paso 4:** `npm test` → pasa. `npm run lint` → sin errores.
+- [x] **Paso 5:** commit «Lógica de planes: generar, va justa, mover y propuestas».
 
 ### Tarea 3: Esquema de la base de datos, seguridad y registro
 
@@ -200,7 +201,7 @@ expect(proponerDiaD([], '2026-10-19')).toBe('2026-10-23'); // sin historial: vie
 - Produce: `lib/supabase/tipos.ts` con `mcp__supabase-horizon__generate_typescript_types`; los
   clientes de `lib/supabase/` pasan a usar `Database`.
 
-- [ ] **Paso 1: prueba de seguridad que falla** en `supabase/pruebas/seguridad.sql` (se ejecuta con
+- [x] **Paso 1: prueba de seguridad que falla** en `supabase/pruebas/seguridad.sql` (se ejecuta con
   `execute_sql`, todo dentro de una transacción que acaba en `rollback`):
   - como `anon`: `select count(*) from planes` → error de permisos.
   - como `authenticated` con `request.jwt.claims` de un usuario de prueba creado dentro de la
@@ -208,8 +209,8 @@ expect(proponerDiaD([], '2026-10-19')).toBe('2026-10-23'); // sin historial: vie
     `accion = 'crear'`, `tabla = 'piezas'`.
   - como `authenticated`: `insert into registro …` directo → error.
   - borrar una pieza usada por una estrategia → error (`restrict`); archivarla → funciona.
-- [ ] **Paso 2:** ejecutarla antes de la migración → falla (las tablas no existen).
-- [ ] **Paso 3:** escribir la migración:
+- [x] **Paso 2:** ejecutarla antes de la migración → falla (las tablas no existen).
+- [x] **Paso 3:** escribir la migración:
   - RLS activado en todas las tablas.
   - `grant select, insert, update, delete` a `authenticated` en todas salvo `registro` (solo
     `select`); nada a `anon` (el proyecto se creó sin exponer tablas solas).
@@ -221,24 +222,25 @@ expect(proponerDiaD([], '2026-10-19')).toBe('2026-10-23'); // sin historial: vie
   - Disparador sobre `auth.users` que crea el perfil con `nombre` = parte del correo antes de la
     `@` (editable luego). Relleno de los usuarios que ya existan.
   - Aplicarla con `apply_migration`.
-- [ ] **Paso 4:** volver a ejecutar la prueba → pasa. `get_advisors` (security) → sin avisos de
+- [x] **Paso 4:** volver a ejecutar la prueba → pasa. `get_advisors` (security) → sin avisos de
   nivel ERROR. Generar `lib/supabase/tipos.ts`. `npm run build` → compila.
-- [ ] **Paso 5:** commit «Esquema inicial con RLS y registro automático».
+- [x] **Paso 5:** commit «Esquema inicial con RLS y registro automático».
 
 ### Tarea 4: Datos iniciales
 
 **Archivos:**
-- Crear: `supabase/migrations/20261018091225_datos_iniciales.sql`
+- Crear: `supabase/migrations/20261018091032_ajustes_esquema.sql` (ajustes de la revisión de la
+  Tarea 3), `supabase/migrations/20261018091225_datos_iniciales.sql`
 
-- [ ] **Paso 1:** consulta de comprobación que falla: `select count(*) from piezas` = 9 y
+- [x] **Paso 1:** consulta de comprobación que falla: `select count(*) from piezas` = 9 y
   `from estrategias` = 4.
-- [ ] **Paso 2:** migración con las piezas y estrategias de `prototipo/index.html` (función
+- [x] **Paso 2:** migración con las piezas y estrategias de `prototipo/index.html` (función
   `semilla`): nombres, formatos, canales, días permitidos, días de preparación y los ítems de E1–E4.
   `nombre_corto` = el texto tras «· » del nombre del prototipo («T4 · Historia del invitado» →
   «Historia del invitado»), o el nombre entero si no lleva prefijo. `hora_habitual` vacía en todas
   (Mario la rellena; no se inventa). Sin planes de ejemplo.
-- [ ] **Paso 3:** aplicar y repetir la consulta → 9 y 4. Comprobar que E1 tiene 5 ítems.
-- [ ] **Paso 4:** commit «Piezas y estrategias del prototipo como datos iniciales».
+- [x] **Paso 3:** aplicar y repetir la consulta → 9 y 4. Comprobar que E1 tiene 5 ítems.
+- [x] **Paso 4:** commit «Piezas y estrategias del prototipo como datos iniciales».
 
 ### Tarea 5: Tema, cabecera, Ajustes y acceso por invitación
 
@@ -268,7 +270,7 @@ expect(proponerDiaD([], '2026-10-19')).toBe('2026-10-23'); // sin historial: vie
   ha caducado. Pide otro a Mario.»
 - `/crear-contrasena` y **Cambiar contraseña** usan `supabase.auth.updateUser({ password })`.
 
-- [ ] **Paso 1: tests que fallan**
+- [x] **Paso 1: tests que fallan**
 
 ```ts
 expect(leerTema()).toBe('sistema');                 // sin valor
@@ -288,8 +290,8 @@ expect(validarContrasena('suficiente1', 'suficiente2')).toBe('Las dos contraseñ
 expect(validarContrasena('suficiente1', 'suficiente1')).toBe(null);
 ```
 
-- [ ] **Paso 2:** `npm test` → fallan.
-- [ ] **Paso 3:** implementar. Tema claro con la lógica de la maqueta (fondo `#f4f6f8`, superficies
+- [x] **Paso 2:** `npm test` → fallan.
+- [x] **Paso 3:** implementar. Tema claro con la lógica de la maqueta (fondo `#f4f6f8`, superficies
   blancas, texto `#0a0e13`, ámbar `#8f5200`) y contraste 4.5:1 en texto pequeño. El script del
   layout va en línea y antes del cuerpo para que no haya destello del tema equivocado. El proxy
   pasa a usar `destinoSegunSesion`. `docs/acceso.md` (runbook, formato de docdocs): cómo invitar,
@@ -298,12 +300,12 @@ expect(validarContrasena('suficiente1', 'suficiente1')).toBe(null);
   `{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&type=invite` (y `type=recovery`), Site
   URL y direcciones permitidas (localhost, vista previa de Vercel y producción). Textos de los
   correos en español.
-- [ ] **Paso 4:** `npm test`, `npm run lint`, `npm run build`. En el navegador integrado (sin
+- [x] **Paso 4:** `npm test`, `npm run lint`, `npm run build`. En el navegador integrado (sin
   sesión): `/entrar`, `/entrar?error=enlace` y que `/ajustes` sin sesión manda a `/entrar`. La
   comprobación con sesión (tema que se mantiene al recargar, «Sistema» con claro y oscuro emulados,
   sección activa de la cabecera, cambiar contraseña, 375 px) la hace el controlador cuando Mario
   haya entrado.
-- [ ] **Paso 5:** commit «Temas, cabecera, Ajustes y acceso por invitación».
+- [x] **Paso 5:** commit «Temas, cabecera, Ajustes y acceso por invitación».
 
 ### Tarea 6: Pantalla Semanas (lectura)
 
@@ -320,7 +322,7 @@ expect(validarContrasena('suficiente1', 'suficiente1')).toBe(null);
   - `VistaSemana { lunes, plan: Plan | null, dias: { fecha, esHoy, piezas: PiezaDePlan[] }[], posicion: 'pasada' | 'actual' | 'siguiente' | 'lejana', avisoSinPlan: boolean }`
   - `leerSemanas(desde: string, hasta: string): Promise<{ planes: Plan[]; piezas: PiezaDePlan[] }>` (servidor)
 
-- [ ] **Paso 1: tests que fallan**
+- [x] **Paso 1: tests que fallan**
 
 ```ts
 const v = construirSemanas([planEp05 /* lunes 2026-10-12, D 2026-10-16 */], piezasEp05, '2026-10-15');
@@ -336,14 +338,14 @@ expect(v[1].dias[3].esHoy).toBe(true);
 expect(v[1].dias[4].piezas.map((p) => p.hora)).toEqual(['18:00']);
 ```
 
-- [ ] **Paso 2:** `npm test -- lib/semanas` → falla.
-- [ ] **Paso 3:** implementar `construirSemanas` (orden de las piezas del día por hora, las vacías al
+- [x] **Paso 2:** `npm test -- lib/semanas` → falla.
+- [x] **Paso 3:** implementar `construirSemanas` (orden de las piezas del día por hora, las vacías al
   final), `leerSemanas` y la pantalla según la maqueta y [diseno.md § Semanas](diseno.md#semanas-la-principal).
   La parte que lee datos va dentro de `<Suspense>` (Cache Components). Sin datos: semana actual vacía
   y siguiente con «Sin planificar».
-- [ ] **Paso 4:** `npm test`, `npm run build`. En el navegador, con un plan creado a mano por SQL en
+- [x] **Paso 4:** `npm test`, `npm run build`. En el navegador, con un plan creado a mano por SQL en
   una transacción de prueba (o tras la Tarea 9): escritorio y 375 px; tema claro y oscuro.
-- [ ] **Paso 5:** commit «Pantalla Semanas».
+- [x] **Paso 5:** commit «Pantalla Semanas».
 
 ### Tarea 7: Panel de pieza y estado
 
@@ -359,19 +361,19 @@ expect(v[1].dias[4].piezas.map((p) => p.hora)).toEqual(['18:00']);
   - `Panel` con props `{ abierto: boolean; alCerrar: () => void; titulo: string; children }`
 - La pieza abierta va en la URL (`?pieza=<id>`) para que el panel sobreviva a una recarga.
 
-- [ ] **Paso 1:** test de `marcarEstado` contra Supabase con un cliente simulado: id inexistente →
+- [x] **Paso 1:** test de `marcarEstado` contra Supabase con un cliente simulado: id inexistente →
   `{ error: 'Esa pieza ya no está en el plan' }`; programar una con `revisar = true` la deja con
   `revisar = false`.
-- [ ] **Paso 2:** implementar el panel (vista normal; el lápiz aún no hace nada), el botón principal
+- [x] **Paso 2:** implementar el panel (vista normal; el lápiz aún no hace nada), el botón principal
   y el registro de la pieza con frases como «Izan la marcó como programada · 14 oct».
-- [ ] **Paso 3:** `npm test`, `npm run build`. En el navegador: marcar y desmarcar, ver el registro
+- [x] **Paso 3:** `npm test`, `npm run build`. En el navegador: marcar y desmarcar, ver el registro
   con el nombre propio, recargar con el panel abierto, móvil con hoja inferior.
-- [ ] **Paso 4:** commit «Panel de pieza: estado y registro».
+- [x] **Paso 4:** commit «Panel de pieza: estado y registro».
 
 ### Tarea 8: Funciones SQL de varias filas
 
 **Archivos:**
-- Crear: `supabase/migrations/<versión>_funciones_planes.sql`, `supabase/pruebas/funciones.sql`
+- Crear: `supabase/migrations/20261018104845_funciones_planes.sql`, `supabase/pruebas/funciones.sql`
 
 **Interfaces:**
 - Produce, todas `security invoker` (respetan RLS) y atómicas:
@@ -379,12 +381,12 @@ expect(v[1].dias[4].piezas.map((p) => p.hora)).toEqual(['18:00']);
   - `mover_plan(plan_id uuid, nuevo_dia_d date) returns void`: desplaza D y todas sus piezas los mismos días; las programadas pasan a pendiente con `revisar = true`; si el nuevo D cae en otra semana, actualiza `lunes` (y error `'semana_con_plan'` si esa ya tiene plan).
   - `cambiar_estrategia(plan_id uuid, estrategia_id uuid, estrategia_nombre text, piezas jsonb) returns void`: sustituye todas las piezas del plan.
 
-- [ ] **Paso 1:** pruebas SQL que fallan: crear dos veces el mismo lunes → la segunda da
+- [x] **Paso 1:** pruebas SQL que fallan: crear dos veces el mismo lunes → la segunda da
   `semana_con_plan` y no deja filas; mover un plan con una pieza programada → esa queda `pendiente`
   con `revisar = true` y la fecha corrida; cambiar de estrategia → las piezas viejas desaparecen; el
   registro anota cada cambio.
-- [ ] **Paso 2:** migración, aplicarla, repetir las pruebas → pasan. Regenerar `lib/supabase/tipos.ts`.
-- [ ] **Paso 3:** commit «Funciones para crear, mover y cambiar de estrategia un plan».
+- [x] **Paso 2:** migración, aplicarla, repetir las pruebas → pasan. Regenerar `lib/supabase/tipos.ts`.
+- [x] **Paso 3:** commit «Funciones para crear, mover y cambiar de estrategia un plan».
 
 ### Tarea 9: Planificar
 
@@ -400,15 +402,15 @@ expect(v[1].dias[4].piezas.map((p) => p.hora)).toEqual(['18:00']);
   - `crearPlan(entrada: { lunes: string; conEpisodio: boolean; diaD: string; numero: string | null; invitado: string | null; tema: string | null; estrategiaId: string }): Promise<{ error?: string }>`
   - `leerEstrategiasYPiezas(): Promise<{ estrategias: Estrategia[]; piezas: Pieza[] }>`
 
-- [ ] **Paso 1:** test de `crearPlan` con cliente simulado: si la RPC devuelve `semana_con_plan` →
+- [x] **Paso 1:** test de `crearPlan` con cliente simulado: si la RPC devuelve `semana_con_plan` →
   `{ error: 'Esa semana ya tiene plan' }`; `diaD` fuera de la semana → `{ error: 'El día de publicación tiene que caer en esa semana' }`.
-- [ ] **Paso 2:** implementar el panel según [diseno.md § Planificar](diseno.md#planificar): Sí/No,
+- [x] **Paso 2:** implementar el panel según [diseno.md § Planificar](diseno.md#planificar): Sí/No,
   datos con las propuestas, estrategias filtradas con su mini fila, vista previa con fechas y horas
   (aviso si alguna hora no existe en España) y **Crear plan**. El botón se desactiva mientras envía.
-- [ ] **Paso 3:** `npm test`, `npm run build`. En el navegador: planificar la semana siguiente con y
+- [x] **Paso 3:** `npm test`, `npm run build`. En el navegador: planificar la semana siguiente con y
   sin episodio; doble clic en **Crear plan** no duplica; la semana aparece llena y el aviso
   desaparece.
-- [ ] **Paso 4:** commit «Planificar una semana».
+- [x] **Paso 4:** commit «Planificar una semana».
 
 ### Tarea 10: Modo edición de pieza y de semana
 
@@ -425,16 +427,16 @@ expect(v[1].dias[4].piezas.map((p) => p.hora)).toEqual(['18:00']);
   aplica `moverPiezaDePlan` antes de guardar. `quitarPiezaDePlan(id)` borra la fila.
   `anadirPiezaSuelta(planId, piezaId, fecha, hora)` copia los datos de la pieza.
 
-- [ ] **Paso 1:** tests de las acciones con cliente simulado: editar la fecha de una programada
+- [x] **Paso 1:** tests de las acciones con cliente simulado: editar la fecha de una programada
   guarda `estado = 'pendiente'` y `revisar = true`; quitar una que ya no existe → `'Esa pieza ya no
   está en el plan'`; `cambiarEstrategiaDePlan` con piezas programadas exige
   `confirmado: true` (sin él → `{ error: 'confirmar' }`).
-- [ ] **Paso 2:** implementar según [diseno.md § Paneles de detalle](diseno.md#paneles-de-detalle):
+- [x] **Paso 2:** implementar según [diseno.md § Paneles de detalle](diseno.md#paneles-de-detalle):
   lápiz → campos → **Guardar** / **Cancelar**; quitar y cambiar de estrategia piden confirmación.
   Al cambiar una hora, el mismo aviso que al planificar si no existe en España (`existeEnMadrid`).
-- [ ] **Paso 3:** `npm test`, `npm run build`. En el navegador: cada edición, la marca ámbar de
+- [x] **Paso 3:** `npm test`, `npm run build`. En el navegador: cada edición, la marca ámbar de
   «revisar en Metricool» y que desaparece al volver a marcar programada.
-- [ ] **Paso 4:** commit «Modo edición de piezas y semanas».
+- [x] **Paso 4:** commit «Modo edición de piezas y semanas».
 
 ### Tarea 11: Estrategias y Piezas
 
@@ -448,16 +450,16 @@ expect(v[1].dias[4].piezas.map((p) => p.hora)).toEqual(['18:00']);
   `guardarPieza(p: Omit<Pieza, 'id' | 'archivada'> & { id?: string })`,
   `archivarPieza(id: string, archivada: boolean)`; todas `Promise<{ error?: string }>`.
 
-- [ ] **Paso 1:** tests con cliente simulado: `guardarEstrategia` con una pieza en un día que no
+- [x] **Paso 1:** tests con cliente simulado: `guardarEstrategia` con una pieza en un día que no
   admite → `{ error: 'Esa pieza no puede ir ese día' }`; `guardarPieza` con hora `'25:00'` →
   error; archivar y recuperar cambian solo `archivada`.
-- [ ] **Paso 2:** implementar según [diseno.md § Estrategias](diseno.md#estrategias): estrategias
+- [x] **Paso 2:** implementar según [diseno.md § Estrategias](diseno.md#estrategias): estrategias
   en «Con episodio» y «Sin episodio» con su mini fila y «no disponible» si usan una archivada;
   piezas con archivadas plegadas al final; **Nueva estrategia** y **Nueva pieza**.
-- [ ] **Paso 3:** `npm test`, `npm run build`. En el navegador: crear y editar una estrategia,
+- [x] **Paso 3:** `npm test`, `npm run build`. En el navegador: crear y editar una estrategia,
   archivar una pieza que usa (deja de ofrecerse al planificar, y los planes que la tienen se siguen
   viendo), recuperarla.
-- [ ] **Paso 4:** commit «Sección Estrategias: estrategias y piezas».
+- [x] **Paso 4:** commit «Sección Estrategias: estrategias y piezas».
 
 ### Tarea 12: Recorrido completo, documentación y publicación
 
