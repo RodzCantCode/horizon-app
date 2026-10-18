@@ -3,6 +3,7 @@ import {
   avisoDePieza,
   construirSemanas,
   datosPlan,
+  diasDelPlan,
   estadoDePieza,
   etiquetaDia,
   etiquetaSemana,
@@ -16,6 +17,7 @@ import {
   textoFormato,
   textoPreparacion,
   tituloPlanificar,
+  tituloSemana,
 } from '@/lib/semanas';
 import type { PiezaDePlan, Plan } from '@/lib/tipos';
 
@@ -314,5 +316,26 @@ describe('tituloPlanificar', () => {
   it('con los dos meses si la semana cambia de mes o de año', () => {
     expect(tituloPlanificar('2026-10-26')).toBe('Planificar la semana del 26 oct al 1 nov');
     expect(tituloPlanificar('2026-12-28')).toBe('Planificar la semana del 28 dic al 3 ene');
+  });
+});
+
+describe('tituloSemana', () => {
+  it('nombra la semana de lunes a domingo, con los dos meses si cambia de mes', () => {
+    expect(tituloSemana('2026-10-19')).toBe('Semana del 19 al 25 oct');
+    expect(tituloSemana('2026-10-26')).toBe('Semana del 26 oct al 1 nov');
+  });
+});
+
+describe('diasDelPlan', () => {
+  it('los siete días de D-1 a D+5 con su fecha y su posición', () => {
+    expect(diasDelPlan('2026-10-23')).toEqual([
+      { fecha: '2026-10-22', etiqueta: 'Jueves 22 oct · D-1' },
+      { fecha: '2026-10-23', etiqueta: 'Viernes 23 oct · D' },
+      { fecha: '2026-10-24', etiqueta: 'Sábado 24 oct · D+1' },
+      { fecha: '2026-10-25', etiqueta: 'Domingo 25 oct · D+2' },
+      { fecha: '2026-10-26', etiqueta: 'Lunes 26 oct · D+3' },
+      { fecha: '2026-10-27', etiqueta: 'Martes 27 oct · D+4' },
+      { fecha: '2026-10-28', etiqueta: 'Miércoles 28 oct · D+5' },
+    ]);
   });
 });

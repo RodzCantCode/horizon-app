@@ -1,10 +1,10 @@
 // Lógica pura de la pantalla Semanas: qué semanas se ven, qué plan y qué piezas tiene cada día, y
-// los textos de sus encabezados, del panel de una pieza y del de planificar. Sin acceso a datos:
+// los textos de sus encabezados y de los paneles (pieza, planificar y semana). Sin acceso a datos:
 // recibe los planes, las piezas y el registro ya leídos (`lib/datos/`) y el día de hoy en España
 // (`hoyEnMadrid`), así se prueba entera.
 
 import { diaSemana, fechaEnMadrid, lunesDe, sumarDias } from '@/lib/fechas';
-import { compararFechaYHora, necesitaAtencion } from '@/lib/planes';
+import { compararFechaYHora, DESPLAZAMIENTOS, necesitaAtencion } from '@/lib/planes';
 import type { Canal, EntradaRegistro, Formato, PiezaDePlan, Plan } from '@/lib/tipos';
 
 export type PosicionSemana = 'pasada' | 'actual' | 'siguiente' | 'lejana';
@@ -214,10 +214,33 @@ export function fraseDeRegistro(e: EntradaRegistro): string {
 
 // --- Panel de planificar ---------------------------------------------
 
-/** «Planificar la semana del 19 al 25 oct»; si cambia de mes, «del 26 oct al 1 nov». */
-export function tituloPlanificar(lunes: string): string {
+/** «del 19 al 25 oct»; si la semana cambia de mes, «del 26 oct al 1 nov». */
+function delLunesAlDomingo(lunes: string): string {
   const inicio = diaYMes(lunes);
   const fin = diaYMes(sumarDias(lunes, 6));
   const desde = inicio.mes === fin.mes ? `${inicio.dia}` : `${inicio.dia} ${inicio.mes}`;
-  return `Planificar la semana del ${desde} al ${fin.dia} ${fin.mes}`;
+  return `del ${desde} al ${fin.dia} ${fin.mes}`;
+}
+
+/** «Planificar la semana del 19 al 25 oct»; si cambia de mes, «del 26 oct al 1 nov». */
+export function tituloPlanificar(lunes: string): string {
+  return `Planificar la semana ${delLunesAlDomingo(lunes)}`;
+}
+
+// --- Panel de una semana ---------------------------------------------
+
+/** «Semana del 19 al 25 oct»; si cambia de mes, «del 26 oct al 1 nov». */
+export function tituloSemana(lunes: string): string {
+  return `Semana ${delLunesAlDomingo(lunes)}`;
+}
+
+/**
+ * Los días en que puede ir una pieza de un plan, de D-1 a D+5, para elegirlos en un panel:
+ * «Jueves 22 oct · D-1».
+ */
+export function diasDelPlan(diaD: string): { fecha: string; etiqueta: string }[] {
+  return DESPLAZAMIENTOS.map((desplazamiento) => {
+    const fecha = sumarDias(diaD, desplazamiento);
+    return { fecha, etiqueta: `${fechaLarga(fecha)} · ${posicionRespectoAD(desplazamiento)}` };
+  });
 }

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { Skeleton } from 'mochi-ui';
 import { leerEstrategiasYPiezas } from '@/lib/datos/estrategias';
 import { leerRegistroDe } from '@/lib/datos/registro';
-import { leerPiezaDePlan, leerPlanes, leerSemanas } from '@/lib/datos/semanas';
+import { leerPiezaDePlan, leerPlanDeSemana, leerPlanes, leerSemanas } from '@/lib/datos/semanas';
 import { diaSemana, esFecha, hoyEnMadrid } from '@/lib/fechas';
 import { proponerDiaD, proponerNumero } from '@/lib/planes';
 import { construirSemanas, rangoSemanas } from '@/lib/semanas';
@@ -11,13 +11,15 @@ import { crearClienteServidor } from '@/lib/supabase/servidor';
 import { rutaEntrar } from '@/lib/supabase/rutas';
 import { PanelPieza } from './semanas/PanelPieza';
 import { PanelPlanificar } from './semanas/PanelPlanificar';
+import { PanelSemana } from './semanas/PanelSemana';
 import { Semana } from './semanas/Semana';
 import { SemanaPlegada } from './semanas/SemanaPlegada';
 import estilos from './inicio.module.css';
 
 // Semanas, la pantalla principal: la pasada y las lejanas plegadas, la actual abierta y la siguiente
 // debajo (docs/diseno.md § Semanas). Pulsar una pieza abre su panel (?pieza=<id>), donde se marca
-// como programada; Planificar abre el de planificar esa semana (?planificar=<lunes>).
+// como programada o se edita; Planificar abre el de planificar esa semana (?planificar=<lunes>), y el
+// encabezado de una semana con plan, el de esa semana (?semana=<lunes>).
 export default function Semanas({ searchParams }: PageProps<'/'>) {
   return (
     <main className={estilos.pagina}>
@@ -29,6 +31,9 @@ export default function Semanas({ searchParams }: PageProps<'/'>) {
       </Suspense>
       <Suspense>
         <PlanificarSemana searchParams={searchParams} />
+      </Suspense>
+      <Suspense>
+        <DetalleSemana searchParams={searchParams} />
       </Suspense>
     </main>
   );
@@ -108,4 +113,20 @@ async function PlanificarSemana({ searchParams }: Pick<PageProps<'/'>, 'searchPa
   };
 
   return <PanelPlanificar key={lunes} lunes={lunes} datos={datos} />;
+}
+
+// El panel de la semana de ?semana=<lunes>, también en su propio <Suspense>: su plan con sus piezas y,
+// para el modo edición, las estrategias y las piezas (cambiar la estrategia y añadir una suelta). Si
+// esa semana no tiene plan, el panel lo dice (PanelSemana con `datos = null`). Un lunes que no lo es
+// (URL escrita a mano) no abre nada.
+async function DetalleSemana({ searchParams }: Pick<PageProps<'/'>, 'searchParams'>) {
+  const { semana: lunes } = await searchParams;
+  if (typeof lunes !== 'string' || !esFecha(lunes) || diaSemana(lunes) !== 0) return null;
+  await exigirSesion();
+
+  const hoy = hoyEnMadrid();
+  const [leido, { estrategias, piezas }] = await Promise.all([leerPlanDeSemana(lunes), leerEstrategiasYPiezas()]);
+  const datos = leido && { plan: leido.plan, piezasDelPlan: leido.piezas, estrategias, piezas };
+
+  return <PanelSemana key={lunes} lunes={lunes} datos={datos} hoy={hoy} />;
 }

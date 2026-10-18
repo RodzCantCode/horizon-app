@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { leerPiezaDePlan, leerPlanes, leerSemanas } from '@/lib/datos/semanas';
+import { leerPiezaDePlan, leerPlanDeSemana, leerPlanes, leerSemanas } from '@/lib/datos/semanas';
 import type { Tables } from '@/lib/supabase/tipos';
 
 // Cliente de Supabase simulado (vi.mock se eleva por encima de los import): cada consulta apunta las
@@ -179,5 +179,37 @@ describe('leerPlanes', () => {
   it('si Supabase falla, lanza un error', async () => {
     preparar({ data: null, error: { message: 'caído' } }, { data: [], error: null });
     await expect(leerPlanes()).rejects.toThrow('No se han podido leer los planes');
+  });
+});
+
+describe('leerPlanDeSemana', () => {
+  it('lee el plan de ese lunes con sus piezas, ordenadas por fecha y hora (sin hora al final)', async () => {
+    const piezas = [
+      { ...filaPieza, id: 'b6', fecha: '2026-10-18', hora: null },
+      { ...filaPieza, id: 'b5', fecha: '2026-10-16', hora: null },
+      filaPieza,
+      { ...filaPieza, id: 'b3', fecha: '2026-10-15', hora: '20:00:00' },
+    ];
+    preparar({ data: { ...filaPlan, plan_piezas: piezas }, error: null }, { data: [], error: null });
+    const leido = await leerPlanDeSemana('2026-10-12');
+
+    expect(consultas.get('planes')!.llamadas).toContainEqual(['eq', 'lunes', '2026-10-12']);
+    expect(leido?.plan).toEqual(expect.objectContaining({ id: 'plan05', diaD: '2026-10-16', numero: '05' }));
+    expect(leido?.piezas.map((p) => [p.id, p.hora])).toEqual([
+      ['b3', '20:00'],
+      ['b4', '18:00'],
+      ['b5', null],
+      ['b6', null],
+    ]);
+  });
+
+  it('si esa semana no tiene plan (o otra persona lo ha movido), devuelve null', async () => {
+    preparar({ data: null, error: null }, { data: [], error: null });
+    expect(await leerPlanDeSemana('2026-10-12')).toBe(null);
+  });
+
+  it('si Supabase falla, lanza un error', async () => {
+    preparar({ data: null, error: { message: 'caído' } }, { data: [], error: null });
+    await expect(leerPlanDeSemana('2026-10-12')).rejects.toThrow('No se ha podido leer la semana');
   });
 });

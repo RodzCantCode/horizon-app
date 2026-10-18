@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
 import { Button, CloseIcon, Dialog, Drawer } from 'mochi-ui';
 import estilos from './panel.module.css';
 
@@ -98,4 +98,33 @@ export function Panel({
       {contenido}
     </Drawer>
   );
+}
+
+/**
+ * Lo que enseña un panel: con el panel abierto, lo que llega ahora; mientras se cierra, lo último que
+ * tuvo. Al quitar una pieza o mover la semana a otra, la página se refresca a la vez que el panel se
+ * cierra y ya no la encuentra: así no cambia a «ya no está» mientras sale.
+ */
+export function useMientrasSeCierra<T>(actual: T | null, abierto: boolean): T | null {
+  const [ultimo, setUltimo] = useState(actual);
+  if (actual !== null && actual !== ultimo) setUltimo(actual);
+  return abierto ? actual : (actual ?? ultimo);
+}
+
+/**
+ * Al cambiar de vista dentro de un panel (ver, editar, confirmar…), el botón pulsado desaparece y el
+ * foco se quedaría en la nada. Lo lleva a lo primero de la vista nueva que lleve `data-foco` o, si no
+ * hay nada marcado, a su primer control: el lápiz al volver, el primer campo al editar. Al montarse no
+ * hace nada (el foco del panel recién abierto lo pone Panel).
+ */
+export function useFocoAlCambiarDeVista(vista: string, contenedor: RefObject<HTMLElement | null>) {
+  const anterior = useRef(vista);
+  useEffect(() => {
+    if (anterior.current === vista) return;
+    anterior.current = vista;
+    const raiz = contenedor.current;
+    const destino =
+      raiz?.querySelector<HTMLElement>('[data-foco]') ?? raiz?.querySelector<HTMLElement>('button, input, a[href]');
+    destino?.focus({ preventScroll: true });
+  }, [vista, contenedor]);
 }

@@ -1,8 +1,9 @@
-// Lectura de las semanas, de los planes y de una pieza para su panel, desde Supabase (solo en el
-// servidor: usa las cookies de la sesión). Aquí se pasan las filas de la base (snake_case,
-// `lib/supabase/tipos.ts`) a los tipos de la app (`lib/tipos.ts`) y, para crear un plan, al revés:
-// las pantallas y `lib/semanas.ts` no ven nunca las de la base.
+// Lectura de las semanas, de los planes y de una pieza o una semana para su panel, desde Supabase
+// (solo en el servidor: usa las cookies de la sesión). Aquí se pasan las filas de la base
+// (snake_case, `lib/supabase/tipos.ts`) a los tipos de la app (`lib/tipos.ts`) y, para crear o
+// cambiar un plan, al revés: las pantallas y `lib/semanas.ts` no ven nunca las de la base.
 
+import { compararFechaYHora } from '@/lib/planes';
 import { crearClienteServidor } from '@/lib/supabase/servidor';
 import type { Tables, TablesInsert } from '@/lib/supabase/tipos';
 import type { Canal, Estado, Formato, NuevaPiezaDePlan, PiezaDePlan, Plan } from '@/lib/tipos';
@@ -129,6 +130,25 @@ export async function leerPlanes(): Promise<Plan[]> {
   const { data, error } = await supabase.from('planes').select('*').order('lunes');
   if (error) throw new Error('No se han podido leer los planes', { cause: error });
   return (data ?? []).map(aPlan);
+}
+
+/**
+ * El plan de la semana que empieza en `lunes`, con sus piezas por fecha y hora (las que no tienen
+ * hora, al final del día), para el panel de la semana. `null` si esa semana no tiene plan (o otra
+ * persona acaba de moverlo a otra). Si Supabase falla, lanza un error.
+ */
+export async function leerPlanDeSemana(lunes: string): Promise<{ plan: Plan; piezas: PiezaDePlan[] } | null> {
+  const supabase = await crearClienteServidor();
+  const { data, error } = await supabase
+    .from('planes')
+    .select('*, plan_piezas(*)')
+    .eq('lunes', lunes)
+    .maybeSingle();
+
+  if (error) throw new Error('No se ha podido leer la semana', { cause: error });
+  if (data === null) return null;
+  const { plan_piezas: piezas, ...plan } = data;
+  return { plan: aPlan(plan), piezas: piezas.map(aPiezaDePlan).sort(compararFechaYHora) };
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

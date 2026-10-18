@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, useTransition } from 'react';
+import { startTransition, useEffect, useId, useRef, useState, useTransition, type FormEvent } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Button } from 'mochi-ui';
+import { Button, PencilIcon, Select, TextField } from 'mochi-ui';
+import { existeEnMadrid, normalizarHora } from '@/lib/fechas';
 import {
   avisoDePieza,
   datosPlan,
+  diasDelPlan,
   estadoDePieza,
+  fechaLarga,
   fechaYPosicion,
   fraseDeRegistro,
   textoCanales,
@@ -14,8 +17,8 @@ import {
   textoPreparacion,
 } from '@/lib/semanas';
 import type { EntradaRegistro, PiezaDePlan, Plan } from '@/lib/tipos';
-import { Panel } from '../componentes/Panel';
-import { marcarEstado } from './acciones';
+import { Panel, useFocoAlCambiarDeVista, useMientrasSeCierra } from '../componentes/Panel';
+import { editarPiezaDePlan, marcarEstado, quitarPiezaDePlan } from './acciones';
 import estilos from './semanas.module.css';
 
 export type DetalleDePieza = { pieza: PiezaDePlan; plan: Plan; registro: EntradaRegistro[] };
@@ -35,7 +38,10 @@ const SIN_CONEXION = 'No se ha podido conectar. Vuelve a intentarlo.';
  * pieza en la semana (Mochi lo devuelve a lo que lo tenía al abrir, pero tras una recarga no había
  * nada, y Safari no enfoca los enlaces al pulsarlos).
  *
- * El lápiz (modo edición) llega con la Tarea 10.
+ * Con el lápiz pasa a modo edición (docs/diseno.md § Paneles de detalle): día de D-1 a D+5 y hora,
+ * con **Guardar** y **Cancelar**, y **Quitar de este plan**, que pide confirmación dentro del panel.
+ * Al quitarla, el panel se cierra. El modo es estado del panel, no va en la URL: al cerrarlo, se
+ * pierde.
  */
 export function PanelPieza({ id, detalle, hoy }: { id: string; detalle: DetalleDePieza | null; hoy: string }) {
   const parametros = useSearchParams();
@@ -60,18 +66,53 @@ export function PanelPieza({ id, detalle, hoy }: { id: string; detalle: DetalleD
     document.querySelector<HTMLElement>(`[data-pieza="${CSS.escape(id)}"]`)?.focus();
   }, [abierto, id]);
 
+  const mostrado = useMientrasSeCierra(detalle, abierto);
+
   return (
     <Panel
       abierto={abierto}
       alCerrar={cerrar}
-      titulo={detalle ? detalle.pieza.nombre : 'Esa pieza ya no está en el plan'}
+      titulo={mostrado ? mostrado.pieza.nombre : 'Esa pieza ya no está en el plan'}
     >
-      {detalle && <DatosPieza key={id} detalle={detalle} hoy={hoy} />}
+      {mostrado && <ContenidoPieza key={id} detalle={mostrado} hoy={hoy} alQuitar={cerrar} />}
     </Panel>
   );
 }
 
-function DatosPieza({ detalle: { pieza, plan, registro }, hoy }: { detalle: DetalleDePieza; hoy: string }) {
+/** Ver o editar: el lápiz pasa a editar; **Guardar** y **Cancelar** vuelven a ver. */
+function ContenidoPieza({
+  detalle,
+  hoy,
+  alQuitar,
+}: {
+  detalle: DetalleDePieza;
+  hoy: string;
+  alQuitar: () => void;
+}) {
+  const [editando, setEditando] = useState(false);
+  const vista = useRef<HTMLDivElement>(null);
+  useFocoAlCambiarDeVista(editando ? 'editar' : 'ver', vista);
+
+  return (
+    <div ref={vista} className={estilos.vista}>
+      {editando ? (
+        <EditarPieza detalle={detalle} alTerminar={() => setEditando(false)} alQuitar={alQuitar} />
+      ) : (
+        <DatosPieza detalle={detalle} hoy={hoy} alEditar={() => setEditando(true)} />
+      )}
+    </div>
+  );
+}
+
+function DatosPieza({
+  detalle: { pieza, plan, registro },
+  hoy,
+  alEditar,
+}: {
+  detalle: DetalleDePieza;
+  hoy: string;
+  alEditar: () => void;
+}) {
   const [enviando, iniciar] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const idRegistro = useId();
@@ -93,11 +134,16 @@ function DatosPieza({ detalle: { pieza, plan, registro }, hoy }: { detalle: Deta
 
   return (
     <>
-      <div className={estilos.cuandoPieza}>
-        <p className={estilos.fechaPieza}>{fechaYPosicion(pieza)}</p>
-        <p className={estilos.estadoPieza} data-atencion={avisoDePieza(pieza, hoy) ? '' : undefined}>
-          {estadoDePieza(pieza, hoy)}
-        </p>
+      <div className={estilos.cabeceraPanel}>
+        <div className={estilos.cuandoPieza}>
+          <p className={estilos.fechaPieza}>{fechaYPosicion(pieza)}</p>
+          <p className={estilos.estadoPieza} data-atencion={avisoDePieza(pieza, hoy) ? '' : undefined}>
+            {estadoDePieza(pieza, hoy)}
+          </p>
+        </div>
+        <Button variant="surface" iconOnly aria-label="Editar" onClick={alEditar}>
+          <PencilIcon size={18} />
+        </Button>
       </div>
 
       <dl className={estilos.datosPieza}>
@@ -142,5 +188,157 @@ function DatosPieza({ detalle: { pieza, plan, registro }, hoy }: { detalle: Deta
         )}
       </section>
     </>
+  );
+}
+
+/**
+ * La pieza en modo edición: día (de D-1 a D+5 de su plan) y hora (vacía, sin hora), con el mismo
+ * aviso que al planificar si la hora no existe en España ese día. **Guardar** es la acción principal
+ * (azul); lo demás, superficie. **Quitar de este plan** pregunta antes en una fila del propio panel.
+ *
+ * El servidor vuelve a comprobarlo todo y, si estaba programada y cambia, la deja para revisar en
+ * Metricool. Las acciones refrescan la página al terminar: el botón sigue cargando hasta que llega la
+ * pieza nueva y entonces se vuelve a ver (o, al quitarla, se cierra el panel).
+ */
+function EditarPieza({
+  detalle: { pieza, plan },
+  alTerminar,
+  alQuitar,
+}: {
+  detalle: DetalleDePieza;
+  alTerminar: () => void;
+  alQuitar: () => void;
+}) {
+  const [fecha, setFecha] = useState(pieza.fecha);
+  const [hora, setHora] = useState(pieza.hora ?? '');
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, iniciarGuardar] = useTransition();
+
+  const horaNormal = normalizarHora(hora);
+  const horaNoExiste = horaNormal !== null && !existeEnMadrid(fecha, horaNormal);
+
+  function guardar(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (guardando) return;
+    setError(null);
+    iniciarGuardar(async () => {
+      try {
+        const resultado = await editarPiezaDePlan(pieza.id, fecha, hora);
+        // Dentro de la transición, para volver a ver a la vez que llega la pieza nueva.
+        startTransition(() => {
+          if (resultado.error) setError(resultado.error);
+          else alTerminar();
+        });
+      } catch {
+        setError(SIN_CONEXION);
+      }
+    });
+  }
+
+  return (
+    <>
+      <form className={estilos.edicion} onSubmit={guardar} noValidate>
+        <div className={estilos.campos}>
+          <Select
+            label="Día"
+            options={diasDelPlan(plan.diaD).map((d) => ({ value: d.fecha, label: d.etiqueta }))}
+            value={fecha}
+            onValueChange={setFecha}
+          />
+          <TextField
+            label="Hora"
+            autoComplete="off"
+            placeholder="hh:mm"
+            value={hora}
+            onValueChange={setHora}
+          />
+        </div>
+        {horaNoExiste && (
+          <p className={estilos.avisoHora}>
+            {`Las ${horaNormal} del ${fechaLarga(fecha).toLowerCase()} no existen en España por el cambio de horario.`}
+          </p>
+        )}
+        <div className={estilos.accionPieza}>
+          <div className={estilos.botones}>
+            <Button type="submit" variant="accent" status={guardando ? 'loading' : 'idle'} loadingLabel="Guardando">
+              Guardar
+            </Button>
+            <Button variant="surface" onClick={alTerminar}>
+              Cancelar
+            </Button>
+          </div>
+          <p className={estilos.errorPieza} role="alert">
+            {error}
+          </p>
+        </div>
+      </form>
+
+      <QuitarPieza pieza={pieza} alQuitar={alQuitar} />
+    </>
+  );
+}
+
+/**
+ * **Quitar de este plan**, con su confirmación en una fila dentro del panel (no otra ventana encima):
+ * «¿Quitar esta pieza del plan?» con **Quitar** y **Cancelar**. Al aparecer, el foco va a la
+ * pregunta; al cancelar, vuelve al botón.
+ */
+function QuitarPieza({ pieza, alQuitar }: { pieza: PiezaDePlan; alQuitar: () => void }) {
+  const [confirmando, setConfirmando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [quitando, iniciar] = useTransition();
+  const zona = useRef<HTMLDivElement>(null);
+  useFocoAlCambiarDeVista(confirmando ? 'confirmar' : 'boton', zona);
+
+  function quitar() {
+    if (quitando) return;
+    setError(null);
+    iniciar(async () => {
+      try {
+        const resultado = await quitarPiezaDePlan(pieza.id);
+        // Dentro de la transición, para que el panel se cierre a la vez que se refresca la semana.
+        startTransition(() => {
+          if (resultado.error) setError(resultado.error);
+          else alQuitar();
+        });
+      } catch {
+        setError(SIN_CONEXION);
+      }
+    });
+  }
+
+  return (
+    <div ref={zona} className={estilos.zonaQuitar}>
+      {confirmando ? (
+        <div className={estilos.confirmacion}>
+          <p data-foco tabIndex={-1}>
+            ¿Quitar esta pieza del plan?
+          </p>
+          <div className={estilos.botones}>
+            <Button
+              variant="surface"
+              className={estilos.peligro}
+              status={quitando ? 'loading' : 'idle'}
+              loadingLabel="Quitando"
+              onClick={quitar}
+            >
+              Quitar
+            </Button>
+            <Button variant="surface" onClick={() => setConfirmando(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <Button variant="surface" className={estilos.peligro} onClick={() => setConfirmando(true)}>
+            Quitar de este plan
+          </Button>
+        </div>
+      )}
+      <p className={estilos.errorPieza} role="alert">
+        {error}
+      </p>
+    </div>
   );
 }

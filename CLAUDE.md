@@ -161,13 +161,13 @@ publicable; las dos son públicas por diseño). `.env.local` no se sube. La clav
 | --- | --- |
 | `app/layout.tsx` | Raíz: fuente, estilos de Mochi y el guion que pone el tema elegido antes de pintar (claro, oscuro o sistema: `lib/tema.ts`) |
 | `app/global.css` | Tokens de Horizon (tema oscuro y claro) y variables de Mochi |
-| `app/(app)/` | Lo que va con cabecera (Semanas `/`, Estrategias, Ajustes). Semanas es `page.tsx` con sus componentes en `semanas/`: pulsar una pieza abre su panel (`?pieza=<id>` en la URL: estado y registro, sobrevive a una recarga); **Planificar** abre el de planificar esa semana (`?planificar=<lunes>`: datos del episodio, estrategia con su mini fila, vista previa y **Crear plan**). Acciones de servidor en `semanas/acciones.ts`. Si una lectura falla, `error.tsx` |
+| `app/(app)/` | Lo que va con cabecera (Semanas `/`, Estrategias, Ajustes). Semanas es `page.tsx` con sus componentes en `semanas/`: pulsar una pieza abre su panel (`?pieza=<id>` en la URL: estado y registro, sobrevive a una recarga); **Planificar** abre el de planificar esa semana (`?planificar=<lunes>`: datos del episodio, estrategia con su mini fila, vista previa y **Crear plan**); el encabezado de una semana con plan abre el suyo (`?semana=<lunes>`: episodio, estrategia y piezas). En los paneles de pieza y de semana, el lápiz pasa a modo edición (estado del panel, no va en la URL). Acciones de servidor en `semanas/acciones.ts`. Si una lectura falla, `error.tsx` |
 | `app/(app)/componentes/` | `Panel.tsx`: el panel de detalle de todas las pantallas (Drawer de Mochi a la derecha; por debajo de 768 px, su Dialog en hoja) |
 | `app/entrar/` | `/entrar`: correo y contraseña. Sin registro: solo por invitación |
 | `app/auth/confirmar/`, `app/crear-contrasena/` | Adonde lleva el enlace de los correos de invitación y recuperación, y **Crea tu contraseña**. Lo que se configura en Supabase: [docs/acceso.md](docs/acceso.md) |
 | `proxy.ts` | Corre antes de cada ruta (en Next.js 16 el `middleware` se llama `proxy`): refresca la sesión y decide adónde va cada uno (`lib/supabase/rutas.ts`) |
 | `lib/supabase/` | Clientes de Supabase con `@supabase/ssr`: `navegador.ts`, `servidor.ts` y `sesion.ts` (el del proxy); `rutas.ts`, qué rutas piden sesión |
-| `lib/datos/` | Lecturas de Supabase en el servidor. Pasan las filas de la base (snake_case) a los tipos de `lib/tipos.ts`, y al revés lo que se manda a las funciones de la base (`crear_plan`): las pantallas y la lógica de `lib/` no ven las de la base |
+| `lib/datos/` | Lecturas de Supabase en el servidor. Pasan las filas de la base (snake_case) a los tipos de `lib/tipos.ts`, y al revés lo que se manda a la base (`crear_plan`, `cambiar_estrategia`, una pieza suelta): las pantallas y la lógica de `lib/` no ven las de la base |
 | `docs/acceso.md` | Cómo invitar, cómo mandar una recuperación y qué configurar en Supabase |
 | `prototipo/index.html` | Prototipo de octubre: referencia del modelo, no de la interfaz. No se sirve |
 | `AGENTS.md` | Lo escribe `next dev`: avisa a los agentes de que lean la documentación de Next que viene en `node_modules/next/dist/docs/`. No se edita a mano |

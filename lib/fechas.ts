@@ -45,6 +45,17 @@ export function esFecha(texto: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(texto) && sumarDias(texto, 0) === texto;
 }
 
+/**
+ * La hora `HH:MM` de un texto escrito a mano: «18:00» tal cual y «9:30» como «09:30». `null` si no es
+ * una hora de reloj de 24 h (de 00:00 a 23:59). Para lo que llega de un campo de hora.
+ */
+export function normalizarHora(texto: string): string | null {
+  const partes = /^(\d{1,2}):(\d{2})$/.exec(texto.trim());
+  if (!partes) return null;
+  if (Number(partes[1]) > 23 || Number(partes[2]) > 59) return null;
+  return `${partes[1].padStart(2, '0')}:${partes[2]}`;
+}
+
 /** Lunes de la semana que contiene la fecha (el lunes se devuelve a sí mismo). */
 export function lunesDe(fecha: string): string {
   return sumarDias(fecha, -diaSemana(fecha));

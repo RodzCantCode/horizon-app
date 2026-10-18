@@ -1,10 +1,7 @@
+import { DESPLAZAMIENTOS } from '@/lib/planes';
 import { posicionRespectoAD } from '@/lib/semanas';
 import type { Estrategia, Pieza } from '@/lib/tipos';
 import estilos from './minifila.module.css';
-
-// Los días en que puede ir una pieza respecto al día D: de D-1 a D+5 (el mismo límite que pone la
-// base en estrategia_piezas).
-const DESPLAZAMIENTOS = [-1, 0, 1, 2, 3, 4, 5];
 
 /**
  * La mini fila de días de una estrategia: siete huecos, de D-1 a D+5, con el nombre corto de las

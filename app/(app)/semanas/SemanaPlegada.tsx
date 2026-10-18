@@ -1,11 +1,13 @@
 import { etiquetaSemana, resumenPlegada, type VistaSemana } from '@/lib/semanas';
 import { BotonPlanificar } from './BotonPlanificar';
+import { BotonVerSemana } from './BotonVerSemana';
 import { Dia } from './Dia';
 import estilos from './semanas.module.css';
 
 // Una semana pasada o lejana: una línea con las fechas y el resumen que se abre al pulsarla y enseña
 // sus siete días. Es un <details> nativo: se abre y se cierra sin JavaScript y con el teclado. Una
-// lejana sin plan se puede planificar desde aquí; una pasada, no.
+// lejana sin plan se puede planificar desde aquí; una pasada, no. Con plan, **Ver la semana** abre su
+// panel, como el encabezado de una semana abierta (pulsar la línea solo la despliega).
 export function SemanaPlegada({ semana, hoy }: { semana: VistaSemana; hoy: string }) {
   return (
     <details className={estilos.plegada} data-posicion={semana.posicion}>
@@ -21,6 +23,11 @@ export function SemanaPlegada({ semana, hoy }: { semana: VistaSemana; hoy: strin
         {semana.posicion === 'lejana' && semana.plan === null && (
           <div>
             <BotonPlanificar lunes={semana.lunes} principal={false} />
+          </div>
+        )}
+        {semana.plan !== null && (
+          <div>
+            <BotonVerSemana lunes={semana.lunes} />
           </div>
         )}
         <ol className={estilos.dias}>

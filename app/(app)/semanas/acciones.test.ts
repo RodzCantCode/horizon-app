@@ -1,65 +1,117 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Tables } from '@/lib/supabase/tipos';
-import { crearPlan, marcarEstado } from './acciones';
+import {
+  anadirPiezaSuelta,
+  cambiarEstrategiaDePlan,
+  crearPlan,
+  editarEpisodio,
+  editarPiezaDePlan,
+  marcarEstado,
+  moverSemana,
+  quitarPiezaDePlan,
+} from './acciones';
 
-// Tabla plan_piezas simulada en memoria: `update(cambios).eq('id', x).select('id')` cambia la fila x
-// si existe y devuelve las filas cambiadas, como PostgREST. Así la prueba mira cómo queda la fila, no
-// solo qué se pidió. vi.mock se eleva por encima de los import; las funciones de dentro leen
-// `filas`, `fallo`, `lecturas` y `respuestaRpc` al llamarse, no al definirse.
-type Fila = { id: string; estado: string; revisar: boolean };
+// Base de datos simulada en memoria, con lo que las acciones usan del cliente de Supabase: from(tabla)
+// con select (y una tabla anidada: «*, planes(*)» o «…, plan_piezas(estado)»), insert, update,
+// delete, eq, order y maybeSingle; y rpc. Se porta como PostgREST en lo que importa aquí: update y
+// delete tocan solo las filas que cumplen los filtros y devuelven las tocadas. Así la prueba mira cómo
+// queda la base, no solo qué se pidió. vi.mock se eleva por encima de los import; las funciones de
+// dentro leen `tablas`, `fallos` y `respuestaRpc` al llamarse, no al definirse.
+type Fila = Record<string, unknown>;
+type ErrorBase = { code: string; message: string };
+type Escritura = { tabla: string; operacion: 'insert' | 'update' | 'delete'; valores?: Fila; filtros: [string, unknown][] };
 
-const filas = new Map<string, Fila>();
-const pedidos: Partial<Fila>[] = [];
-let fallo: { code: string; message: string } | null = null;
+const tablas = new Map<string, Fila[]>();
+/** Tablas cuya próxima consulta (cualquiera) falla con ese error. */
+const fallos = new Map<string, ErrorBase>();
+/** Lo que se ha pedido escribir, en orden. */
+const escrituras: Escritura[] = [];
 
-function tablaPlanPiezas() {
-  return {
-    update(cambios: Partial<Fila>) {
-      pedidos.push(cambios);
-      return {
-        eq(columna: string, valor: string) {
-          if (columna !== 'id') throw new Error(`Filtro no previsto en la prueba: ${columna}`);
-          return {
-            async select() {
-              if (fallo) return { data: null, error: fallo };
-              const fila = filas.get(valor);
-              if (!fila) return { data: [], error: null };
-              Object.assign(fila, cambios);
-              return { data: [{ id: fila.id }], error: null };
-            },
-          };
-        },
-      };
+function consulta(tabla: string) {
+  let operacion: 'select' | Escritura['operacion'] = 'select';
+  let valores: Fila | undefined;
+  let anidada: string | null = null;
+  let una = false;
+  const filtros: [string, unknown][] = [];
+  const cumple = (fila: Fila) => filtros.every(([columna, valor]) => fila[columna] === valor);
+
+  // La tabla anidada se pega como la da PostgREST: un plan dentro de su pieza, las piezas dentro de
+  // su plan. Las estrategias ya llevan sus estrategia_piezas en la fila preparada.
+  function conAnidada(fila: Fila): Fila {
+    if (anidada === 'planes') {
+      return { ...fila, planes: tablas.get('planes')?.find((p) => p.id === fila.plan_id) ?? null };
+    }
+    if (anidada === 'plan_piezas') {
+      return { ...fila, plan_piezas: (tablas.get('plan_piezas') ?? []).filter((p) => p.plan_id === fila.id) };
+    }
+    return { ...fila };
+  }
+
+  function ejecutar(): { data: unknown; error: ErrorBase | null } {
+    if (operacion !== 'select') escrituras.push({ tabla, operacion, valores, filtros });
+    const fallo = fallos.get(tabla);
+    if (fallo) return { data: null, error: fallo };
+
+    const filas = tablas.get(tabla) ?? [];
+    if (operacion === 'select') {
+      const elegidas = filas.filter(cumple).map(conAnidada);
+      return { data: una ? (elegidas[0] ?? null) : elegidas, error: null };
+    }
+    if (operacion === 'update') {
+      const elegidas = filas.filter(cumple);
+      for (const fila of elegidas) Object.assign(fila, valores);
+      return { data: elegidas.map((fila) => ({ ...fila })), error: null };
+    }
+    if (operacion === 'delete') {
+      tablas.set(tabla, filas.filter((fila) => !cumple(fila)));
+      return { data: filas.filter(cumple), error: null };
+    }
+    const nueva = { id: `nueva-${filas.length + 1}`, ...valores };
+    tablas.set(tabla, [...filas, nueva]);
+    return { data: [nueva], error: null };
+  }
+
+  const constructor = {
+    select(columnas = '*') {
+      anidada = /(planes|plan_piezas)\(/.exec(columnas)?.[1] ?? null;
+      return constructor;
     },
-  };
-}
-
-// Tablas que crearPlan solo lee (piezas y estrategias, con lib/datos/estrategias.ts): select y order
-// se encadenan y, al esperar la consulta, llega lo preparado en `lecturas`.
-const lecturas = new Map<string, { data: unknown; error: unknown }>();
-
-function tablaDeLectura(tabla: string) {
-  const resultado = lecturas.get(tabla);
-  if (!resultado) throw new Error(`Tabla no preparada en la prueba: ${tabla}`);
-  const consulta = {
-    select: () => consulta,
-    order: () => consulta,
+    insert(fila: Fila) {
+      operacion = 'insert';
+      valores = fila;
+      return constructor;
+    },
+    update(cambios: Fila) {
+      operacion = 'update';
+      valores = cambios;
+      return constructor;
+    },
+    delete() {
+      operacion = 'delete';
+      return constructor;
+    },
+    eq(columna: string, valor: unknown) {
+      filtros.push([columna, valor]);
+      return constructor;
+    },
+    order: () => constructor,
+    maybeSingle() {
+      una = true;
+      return constructor;
+    },
     then: (resolver: (r: unknown) => unknown, rechazar: (e: unknown) => unknown) =>
-      Promise.resolve(resultado).then(resolver, rechazar),
+      Promise.resolve().then(ejecutar).then(resolver, rechazar),
   };
-  return consulta;
+  return constructor;
 }
 
 // Llamadas a funciones de la base (rpc) y lo que responde la próxima.
 const llamadasRpc: [string, Record<string, unknown>][] = [];
-let respuestaRpc: { data: unknown; error: { code: string; message: string } | null } = {
-  data: null,
-  error: null,
-};
+let respuestaRpc: { data: unknown; error: ErrorBase | null } = { data: null, error: null };
 
 vi.mock('@/lib/supabase/servidor', () => ({
   crearClienteServidor: async () => ({
-    from: (tabla: string) => (tabla === 'plan_piezas' ? tablaPlanPiezas() : tablaDeLectura(tabla)),
+    from: consulta,
     rpc: async (funcion: string, argumentos: Record<string, unknown>) => {
       llamadasRpc.push([funcion, argumentos]);
       return respuestaRpc;
@@ -114,13 +166,57 @@ const filasEstrategias = [
   filaEstrategia('e3', 'E3 · Recopilación', false, [['t3', -1], ['ra', 1], ['ra', 4], ['t1', 5]]),
 ];
 
+// Un plan en la base: el episodio 06, semana del lunes 19 de octubre de 2026 y día D el viernes 23,
+// con la estrategia E1. Los ids de las piezas de plan son uuid porque así los lee leerPiezaDePlan.
+const PLAN = 'a0a0a0a0-0000-4000-8000-000000000001';
+const CLIP = 'b1b1b1b1-0000-4000-8000-000000000001';
+const T4 = 'b1b1b1b1-0000-4000-8000-000000000002';
+
+function filaPlan(cambios: Partial<Tables<'planes'>> = {}): Tables<'planes'> {
+  return {
+    id: PLAN,
+    lunes: '2026-10-19',
+    dia_d: '2026-10-23',
+    con_episodio: true,
+    numero: '06',
+    invitado: 'Invitada de prueba',
+    tema: null,
+    estrategia_id: 'e1',
+    estrategia_nombre: 'E1 · Anticipación fuerte',
+    ...cambios,
+  };
+}
+
+/** El clip principal del plan, en D a las 18:00 (la base da las horas con segundos). */
+function filaPiezaDePlan(cambios: Partial<Tables<'plan_piezas'>> = {}): Tables<'plan_piezas'> {
+  return {
+    id: CLIP,
+    plan_id: PLAN,
+    pieza_id: 'rp',
+    nombre: 'Clip principal',
+    nombre_corto: 'Clip principal',
+    formato: 'reel',
+    canales: ['ig', 'tiktok', 'shorts'],
+    dias_preparacion: 2,
+    desplazamiento: 0,
+    fecha: '2026-10-23',
+    hora: '18:00:00',
+    estado: 'pendiente',
+    revisar: false,
+    ...cambios,
+  };
+}
+
+const filaDe = (tabla: string, id: string) => tablas.get(tabla)?.find((f) => f.id === id);
+
 beforeEach(() => {
-  filas.clear();
-  pedidos.length = 0;
-  fallo = null;
-  lecturas.clear();
-  lecturas.set('piezas', { data: filasPiezas(), error: null });
-  lecturas.set('estrategias', { data: filasEstrategias, error: null });
+  tablas.clear();
+  tablas.set('piezas', filasPiezas());
+  tablas.set('estrategias', filasEstrategias.map((e) => ({ ...e })));
+  tablas.set('planes', []);
+  tablas.set('plan_piezas', []);
+  fallos.clear();
+  escrituras.length = 0;
   llamadasRpc.length = 0;
   respuestaRpc = { data: '00000000-0000-4000-8000-000000000001', error: null };
   refresh.mockClear();
@@ -128,19 +224,21 @@ beforeEach(() => {
 
 describe('marcarEstado', () => {
   it('programar una pieza marcada para revisar la deja programada y sin la marca', async () => {
-    filas.set('p1', { id: 'p1', estado: 'pendiente', revisar: true });
+    tablas.set('plan_piezas', [{ id: 'p1', estado: 'pendiente', revisar: true }]);
 
     expect(await marcarEstado('p1', 'programada')).toEqual({});
-    expect(filas.get('p1')).toEqual({ id: 'p1', estado: 'programada', revisar: false });
+    expect(filaDe('plan_piezas', 'p1')).toEqual({ id: 'p1', estado: 'programada', revisar: false });
     expect(refresh).toHaveBeenCalledOnce();
   });
 
   it('volver a pendiente solo cambia el estado', async () => {
-    filas.set('p1', { id: 'p1', estado: 'programada', revisar: false });
+    tablas.set('plan_piezas', [{ id: 'p1', estado: 'programada', revisar: false }]);
 
     expect(await marcarEstado('p1', 'pendiente')).toEqual({});
-    expect(pedidos).toEqual([{ estado: 'pendiente' }]);
-    expect(filas.get('p1')).toEqual({ id: 'p1', estado: 'pendiente', revisar: false });
+    expect(escrituras).toEqual([
+      { tabla: 'plan_piezas', operacion: 'update', valores: { estado: 'pendiente' }, filtros: [['id', 'p1']] },
+    ]);
+    expect(filaDe('plan_piezas', 'p1')).toEqual({ id: 'p1', estado: 'pendiente', revisar: false });
     expect(refresh).toHaveBeenCalledOnce();
   });
 
@@ -152,8 +250,8 @@ describe('marcarEstado', () => {
   });
 
   it('si Supabase falla devuelve un error legible y no refresca', async () => {
-    filas.set('p1', { id: 'p1', estado: 'pendiente', revisar: false });
-    fallo = { code: '42501', message: 'permission denied for table plan_piezas' };
+    tablas.set('plan_piezas', [{ id: 'p1', estado: 'pendiente', revisar: false }]);
+    fallos.set('plan_piezas', { code: '42501', message: 'permission denied for table plan_piezas' });
 
     expect(await marcarEstado('p1', 'programada')).toEqual({
       error: 'No se ha podido guardar. Vuelve a intentarlo.',
@@ -240,7 +338,7 @@ describe('crearPlan', () => {
   });
 
   it('una estrategia que usa una pieza archivada no se puede usar', async () => {
-    lecturas.set('piezas', { data: filasPiezas({ rt: { archivada: true } }), error: null });
+    tablas.set('piezas', filasPiezas({ rt: { archivada: true } }));
 
     expect(await crearPlan({ ...entrada, estrategiaId: 'e2' })).toEqual({
       error: 'Esa estrategia ya no está disponible',
@@ -302,10 +400,305 @@ describe('crearPlan', () => {
   });
 
   it('si no se pueden leer las estrategias, da el mismo error legible sin llamar a la base', async () => {
-    lecturas.set('estrategias', { data: null, error: { code: '42501', message: 'permission denied' } });
+    fallos.set('estrategias', { code: '42501', message: 'permission denied' });
 
     expect(await crearPlan(entrada)).toEqual({ error: 'No se ha podido guardar. Vuelve a intentarlo.' });
     expect(llamadasRpc).toEqual([]);
     expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe('editarPiezaDePlan', () => {
+  beforeEach(() => tablas.set('planes', [filaPlan()]));
+
+  it('mover de día una programada la deja pendiente y marcada para revisar en Metricool', async () => {
+    tablas.set('plan_piezas', [filaPiezaDePlan({ estado: 'programada' })]);
+
+    expect(await editarPiezaDePlan(CLIP, '2026-10-24', '18:00')).toEqual({});
+    expect(filaDe('plan_piezas', CLIP)).toEqual(
+      expect.objectContaining({ fecha: '2026-10-24', hora: '18:00', estado: 'pendiente', revisar: true }),
+    );
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('el desplazamiento se recalcula desde el día D del plan', async () => {
+    tablas.set('plan_piezas', [filaPiezaDePlan()]);
+
+    expect(await editarPiezaDePlan(CLIP, '2026-10-22', '18:00')).toEqual({});
+    expect(filaDe('plan_piezas', CLIP)).toEqual(expect.objectContaining({ fecha: '2026-10-22', desplazamiento: -1 }));
+  });
+
+  it('guardar sin cambiar día ni hora no la marca para revisar', async () => {
+    // La base da «18:00:00» y el panel manda «18:00»: es la misma hora.
+    tablas.set('plan_piezas', [filaPiezaDePlan({ estado: 'programada' })]);
+
+    expect(await editarPiezaDePlan(CLIP, '2026-10-23', '18:00')).toEqual({});
+    expect(filaDe('plan_piezas', CLIP)).toEqual(expect.objectContaining({ estado: 'programada', revisar: false }));
+  });
+
+  it('un día fuera de D-1…D+5 no se guarda', async () => {
+    tablas.set('plan_piezas', [filaPiezaDePlan()]);
+
+    for (const fecha of ['2026-10-21', '2026-10-29', '2026-02-30', '']) {
+      expect(await editarPiezaDePlan(CLIP, fecha, '18:00')).toEqual({
+        error: 'El día tiene que estar entre D-1 y D+5',
+      });
+    }
+    expect(escrituras).toEqual([]);
+    expect(filaDe('plan_piezas', CLIP)).toEqual(filaPiezaDePlan());
+  });
+
+  it('una hora vacía se guarda como sin hora (null), nunca como texto vacío', async () => {
+    tablas.set('plan_piezas', [filaPiezaDePlan()]);
+
+    expect(await editarPiezaDePlan(CLIP, '2026-10-23', '')).toEqual({});
+    expect(escrituras[0].valores).toHaveProperty('hora', null);
+    expect(filaDe('plan_piezas', CLIP)).toHaveProperty('hora', null);
+  });
+
+  it('una hora que no es una hora no se guarda', async () => {
+    tablas.set('plan_piezas', [filaPiezaDePlan()]);
+
+    for (const hora of ['25:00', '18.00', 'tarde']) {
+      expect(await editarPiezaDePlan(CLIP, '2026-10-23', hora)).toEqual({ error: 'Esa hora no es válida' });
+    }
+    expect(escrituras).toEqual([]);
+  });
+
+  it('si la pieza ya no está en el plan (otra persona la ha quitado), lo dice y refresca', async () => {
+    expect(await editarPiezaDePlan(CLIP, '2026-10-24', '18:00')).toEqual({
+      error: 'Esa pieza ya no está en el plan',
+    });
+    expect(escrituras).toEqual([]);
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+});
+
+describe('quitarPiezaDePlan', () => {
+  it('borra solo esa pieza, filtrando por su id', async () => {
+    tablas.set('plan_piezas', [filaPiezaDePlan(), filaPiezaDePlan({ id: T4, pieza_id: 't4', fecha: '2026-10-22' })]);
+
+    expect(await quitarPiezaDePlan(CLIP)).toEqual({});
+    expect(escrituras).toEqual([{ tabla: 'plan_piezas', operacion: 'delete', filtros: [['id', CLIP]] }]);
+    expect(tablas.get('plan_piezas')!.map((f) => f.id)).toEqual([T4]);
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('una pieza que ya no existe devuelve el aviso y refresca', async () => {
+    expect(await quitarPiezaDePlan(CLIP)).toEqual({ error: 'Esa pieza ya no está en el plan' });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('si Supabase falla, da un error legible y no refresca', async () => {
+    tablas.set('plan_piezas', [filaPiezaDePlan()]);
+    fallos.set('plan_piezas', { code: '42501', message: 'permission denied for table plan_piezas' });
+
+    expect(await quitarPiezaDePlan(CLIP)).toEqual({ error: 'No se ha podido guardar. Vuelve a intentarlo.' });
+    expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe('editarEpisodio', () => {
+  it('guarda número, invitado y tema sin espacios de más, y vacíos como null', async () => {
+    tablas.set('planes', [filaPlan()]);
+
+    expect(await editarEpisodio(PLAN, { numero: ' 07 ', invitado: '', tema: '  Tema de prueba ' })).toEqual({});
+    expect(filaDe('planes', PLAN)).toEqual(filaPlan({ numero: '07', invitado: null, tema: 'Tema de prueba' }));
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('con episodio hace falta el número', async () => {
+    tablas.set('planes', [filaPlan()]);
+
+    expect(await editarEpisodio(PLAN, { numero: '  ', invitado: null, tema: null })).toEqual({
+      error: 'Falta el número del episodio',
+    });
+    expect(escrituras).toEqual([]);
+  });
+
+  it('una semana sin episodio no guarda número, invitado ni tema', async () => {
+    tablas.set('planes', [filaPlan({ con_episodio: false, numero: null, invitado: null })]);
+
+    expect(await editarEpisodio(PLAN, { numero: '07', invitado: 'Alguien', tema: null })).toEqual({
+      error: 'Esa semana no tiene episodio',
+    });
+    expect(escrituras).toEqual([]);
+  });
+
+  it('si el plan ya no existe, lo dice y refresca', async () => {
+    expect(await editarEpisodio(PLAN, { numero: '07', invitado: null, tema: null })).toEqual({
+      error: 'Ese plan ya no existe',
+    });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+});
+
+describe('anadirPiezaSuelta', () => {
+  beforeEach(() => tablas.set('planes', [filaPlan()]));
+
+  it('copia los datos de la pieza en ese día, con la hora elegida, y la deja pendiente', async () => {
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11:30')).toEqual({});
+
+    expect(escrituras).toEqual([
+      {
+        tabla: 'plan_piezas',
+        operacion: 'insert',
+        valores: {
+          plan_id: PLAN,
+          pieza_id: 't2',
+          nombre: 'T2 · Valor + CTA',
+          nombre_corto: 'Valor + CTA',
+          formato: 'slide',
+          canales: ['ig', 'tiktok'],
+          dias_preparacion: 3,
+          desplazamiento: 1,
+          fecha: '2026-10-24',
+          hora: '11:30',
+        },
+        filtros: [],
+      },
+    ]);
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('una hora vacía va como null', async () => {
+    expect(await anadirPiezaSuelta(PLAN, 'rp', '2026-10-23', '')).toEqual({});
+    expect(escrituras[0].valores).toHaveProperty('hora', null);
+  });
+
+  it('una pieza archivada no se puede añadir', async () => {
+    tablas.set('piezas', filasPiezas({ t2: { archivada: true } }));
+
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11:30')).toEqual({
+      error: 'Esa pieza ya no está disponible',
+    });
+    expect(escrituras).toEqual([]);
+    // Refresca para que la lista del panel deje de ofrecerla.
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('un día fuera de D-1…D+5 o una hora que no es una hora no se guardan', async () => {
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-29', '11:30')).toEqual({
+      error: 'El día tiene que estar entre D-1 y D+5',
+    });
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11')).toEqual({ error: 'Esa hora no es válida' });
+    expect(escrituras).toEqual([]);
+  });
+
+  it('si el plan ya no existe, lo dice y refresca', async () => {
+    tablas.set('planes', []);
+
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11:30')).toEqual({ error: 'Ese plan ya no existe' });
+    expect(escrituras).toEqual([]);
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('si el plan desaparece entre la lectura y el alta (clave ajena rota), dice lo mismo', async () => {
+    fallos.set('plan_piezas', { code: '23503', message: 'insert or update on table "plan_piezas" violates foreign key constraint' });
+
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11:30')).toEqual({ error: 'Ese plan ya no existe' });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+});
+
+describe('moverSemana', () => {
+  it('mueve el plan con mover_plan y refresca', async () => {
+    expect(await moverSemana(PLAN, '2026-10-30')).toEqual({});
+    expect(llamadasRpc).toEqual([['mover_plan', { plan_id: PLAN, nuevo_dia_d: '2026-10-30' }]]);
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('si la semana de destino ya tiene plan, lo dice y refresca', async () => {
+    respuestaRpc = { data: null, error: { code: 'P0001', message: 'semana_con_plan' } };
+
+    expect(await moverSemana(PLAN, '2026-10-30')).toEqual({ error: 'Esa semana ya tiene plan' });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('si el plan ya no existe, lo dice y refresca', async () => {
+    respuestaRpc = { data: null, error: { code: 'P0001', message: 'plan_no_existe' } };
+
+    expect(await moverSemana(PLAN, '2026-10-30')).toEqual({ error: 'Ese plan ya no existe' });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('una fecha que no existe no llega a la base', async () => {
+    for (const fecha of ['2026-02-30', '30/10/2026', '']) {
+      expect(await moverSemana(PLAN, fecha)).toEqual({ error: 'Esa fecha no es válida' });
+    }
+    expect(llamadasRpc).toEqual([]);
+  });
+
+  it('si Supabase falla por otra cosa, da un error legible y no refresca', async () => {
+    respuestaRpc = { data: null, error: { code: '42501', message: 'permission denied for function mover_plan' } };
+
+    expect(await moverSemana(PLAN, '2026-10-30')).toEqual({ error: 'No se ha podido guardar. Vuelve a intentarlo.' });
+    expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe('cambiarEstrategiaDePlan', () => {
+  beforeEach(() => tablas.set('planes', [filaPlan()]));
+
+  it('con piezas ya programadas, sin confirmar no cambia nada y pide confirmación', async () => {
+    tablas.set('plan_piezas', [filaPiezaDePlan({ estado: 'programada' })]);
+
+    expect(await cambiarEstrategiaDePlan(PLAN, 'e2', false)).toEqual({ error: 'confirmar' });
+    expect(llamadasRpc).toEqual([]);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('confirmado, cambia la estrategia con las piezas generadas en el servidor desde el D de la base', async () => {
+    // El D de la base es el jueves 22, no el que pudiera tener el panel.
+    tablas.set('planes', [filaPlan({ dia_d: '2026-10-22' })]);
+    tablas.set('plan_piezas', [filaPiezaDePlan({ estado: 'programada', fecha: '2026-10-22' })]);
+
+    expect(await cambiarEstrategiaDePlan(PLAN, 'e2', true)).toEqual({});
+    expect(llamadasRpc).toHaveLength(1);
+    const [funcion, argumentos] = llamadasRpc[0];
+    expect(funcion).toBe('cambiar_estrategia');
+    expect(argumentos).toEqual(
+      expect.objectContaining({ plan_id: PLAN, estrategia_id: 'e2', estrategia_nombre: 'E2 · Valor primero' }),
+    );
+    const piezas = argumentos.piezas as Record<string, unknown>[];
+    expect(piezas.map((p) => [p.pieza_id, p.fecha, p.hora])).toEqual([
+      ['rt', '2026-10-21', null],
+      ['rp', '2026-10-22', '18:00'],
+      ['t2', '2026-10-23', null],
+      ['t3', '2026-10-26', null],
+      ['rc', '2026-10-27', null],
+    ]);
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('sin piezas programadas no hace falta confirmar', async () => {
+    tablas.set('plan_piezas', [filaPiezaDePlan()]);
+
+    expect(await cambiarEstrategiaDePlan(PLAN, 'e2', false)).toEqual({});
+    expect(llamadasRpc.map(([funcion]) => funcion)).toEqual(['cambiar_estrategia']);
+  });
+
+  it('una estrategia del otro tipo o que usa una pieza archivada no se puede usar', async () => {
+    expect(await cambiarEstrategiaDePlan(PLAN, 'e3', true)).toEqual({
+      error: 'Esa estrategia ya no está disponible',
+    });
+    tablas.set('piezas', filasPiezas({ rt: { archivada: true } }));
+    expect(await cambiarEstrategiaDePlan(PLAN, 'e2', true)).toEqual({
+      error: 'Esa estrategia ya no está disponible',
+    });
+    expect(llamadasRpc).toEqual([]);
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it('si el plan ya no existe, lo dice y refresca', async () => {
+    tablas.set('planes', []);
+    expect(await cambiarEstrategiaDePlan(PLAN, 'e2', true)).toEqual({ error: 'Ese plan ya no existe' });
+    expect(llamadasRpc).toEqual([]);
+
+    // O si desaparece entre la lectura y el cambio.
+    tablas.set('planes', [filaPlan()]);
+    respuestaRpc = { data: null, error: { code: 'P0001', message: 'plan_no_existe' } };
+    expect(await cambiarEstrategiaDePlan(PLAN, 'e2', true)).toEqual({ error: 'Ese plan ya no existe' });
+    expect(refresh).toHaveBeenCalledTimes(2);
   });
 });

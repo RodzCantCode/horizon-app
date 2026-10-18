@@ -442,6 +442,146 @@
   line-height: 1.4;
 }
 
+/* --- Encabezado que abre el panel de la semana (Semana.tsx) ---------- */
+/* Con plan, las fechas son un enlace y, con ::after, cubre todo el encabezado (fechas y datos). Al
+   pasar por encima, las fechas se subrayan. */
+.titulos:has(.enlaceSemana) {
+  position: relative;
+}
+
+.enlaceSemana::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+@media (hover: hover) {
+  .enlaceSemana:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 0.06em;
+    text-underline-offset: 0.12em;
+  }
+}
+
+/* --- Modo edición (PanelPieza.tsx y PanelSemana.tsx) ----------------- */
+/* Cada vista del panel (ver, editar, mover…) va en un contenedor que no cuenta para la maqueta: sus
+   partes siguen separándose como las del cuerpo del panel. El botón principal y su error usan
+   .accionPieza y .errorPieza, y el aviso de la hora, .avisoHora, como en los otros paneles. */
+.vista {
+  display: contents;
+}
+
+/* Arriba de la vista normal: lo que se ve de un vistazo y, a la derecha, el lápiz. */
+.cabeceraPanel {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.cabeceraPanel > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.edicion {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.campos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Bajo el día al mover la semana: a qué semana pasa el plan. */
+.notaCampo {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--papel-medio);
+}
+
+.botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* Quitar, y cambiar la estrategia cuando se pierden piezas programadas: botón de superficie con el
+   texto en el rojo de Mochi (el de los errores). Mochi pinta el texto con su variable en línea, así
+   que se cambia la variable solo para este botón. */
+.peligro {
+  --mochi-on-surface: var(--mochi-danger-strong);
+}
+
+.zonaQuitar {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--linea);
+}
+
+/* Una pregunta antes de algo que no se deshace, con sus dos botones, en el sitio del botón que la
+   abrió. Recibe el foco para que se lea, pero no es un control: sin anillo. */
+.confirmacion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+.confirmacion > p:focus {
+  outline: none;
+}
+
+/* Los otros cambios de una semana, uno debajo de otro y, con episodio, separados de sus datos. */
+.otrosCambios {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.edicion + .otrosCambios {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--linea);
+}
+
+/* --- Panel de una semana (PanelSemana.tsx) --------------------------- */
+/* Sus piezas: marca, día, hora y nombre en columnas, como la vista previa de planificar (con sus
+   clases para el día, la hora y el nombre). Cada una abre su panel. */
+.piezasSemana {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.piezaSemana {
+  display: grid;
+  grid-template-columns: 10px 3.25rem 3rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: baseline;
+  padding: 0.375rem 0;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+}
+
+/* La marca no tiene texto: se centra en la línea en vez de ir a la base. */
+.piezaSemana > .marca {
+  align-self: center;
+}
+
+@media (hover: hover) {
+  .piezaSemana:hover .nombrePrevia {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+}
+
 /* --- Pantalla estrecha: los días en lista ---------------------------- */
 /* La maqueta pone la lista en el móvil. Aquí empieza antes, por debajo de 1024 px: en siete columnas
    más estrechas, a una palabra como «secundario» (unos 70 px) ya no le cabe el hueco que le deja la

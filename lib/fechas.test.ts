@@ -7,6 +7,7 @@ import {
   fechaEnMadrid,
   hoyEnMadrid,
   lunesDe,
+  normalizarHora,
   sumarDias,
 } from '@/lib/fechas';
 
@@ -171,5 +172,20 @@ describe('esFecha', () => {
     expect(esFecha('2026-1-5')).toBe(false);
     expect(esFecha('2026-10-19T00:00')).toBe(false);
     expect(esFecha('')).toBe(false);
+  });
+});
+
+describe('normalizarHora', () => {
+  it('deja una hora HH:MM como está y completa la hora de una cifra', () => {
+    expect(normalizarHora('18:00')).toBe('18:00');
+    expect(normalizarHora('00:05')).toBe('00:05');
+    expect(normalizarHora('9:30')).toBe('09:30');
+    expect(normalizarHora(' 23:59 ')).toBe('23:59');
+  });
+
+  it('rechaza lo que no es una hora de reloj de 24 h', () => {
+    for (const texto of ['24:00', '18:60', '18', '1800', '18.00', '18:0', '118:00', 'a las 6', '']) {
+      expect(normalizarHora(texto)).toBeNull();
+    }
   });
 });

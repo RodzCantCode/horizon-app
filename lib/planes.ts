@@ -20,9 +20,35 @@ export function compararFechaYHora(
 }
 
 /**
+ * Los días respecto a D en que puede ir una pieza, en una estrategia o en un plan: de D-1 a D+5 (el
+ * mismo límite que pone la base en estrategia_piezas).
+ */
+export const DESPLAZAMIENTOS: readonly number[] = [-1, 0, 1, 2, 3, 4, 5];
+
+/**
+ * Copia fija de una pieza para un plan, en ese día respecto a D, con su hora habitual, pendiente y sin
+ * marca de revisar. Editarla o archivarla después no cambia la copia.
+ */
+export function copiarPieza(pieza: Pieza, diaD: string, desplazamiento: number): NuevaPiezaDePlan {
+  return {
+    piezaId: pieza.id,
+    nombre: pieza.nombre,
+    nombreCorto: pieza.nombreCorto,
+    formato: pieza.formato,
+    canales: [...pieza.canales],
+    diasPreparacion: pieza.diasPreparacion,
+    desplazamiento,
+    fecha: sumarDias(diaD, desplazamiento),
+    hora: pieza.horaHabitual,
+    estado: 'pendiente',
+    revisar: false,
+  };
+}
+
+/**
  * Piezas de un plan a partir de una estrategia y el día D. Cada una es una copia fija de la pieza en
- * ese momento: editarla o archivarla después no cambia lo generado. Salen ordenadas por fecha y hora;
- * a igual fecha y hora se mantiene el orden de la estrategia.
+ * ese momento (`copiarPieza`). Salen ordenadas por fecha y hora; a igual fecha y hora se mantiene el
+ * orden de la estrategia.
  */
 export function generarPiezasDePlan(
   estrategia: Estrategia,
@@ -34,19 +60,7 @@ export function generarPiezasDePlan(
     if (!pieza) {
       throw new Error(`La estrategia «${estrategia.nombre}» usa la pieza «${piezaId}», que no existe`);
     }
-    return {
-      piezaId: pieza.id,
-      nombre: pieza.nombre,
-      nombreCorto: pieza.nombreCorto,
-      formato: pieza.formato,
-      canales: [...pieza.canales],
-      diasPreparacion: pieza.diasPreparacion,
-      desplazamiento,
-      fecha: sumarDias(diaD, desplazamiento),
-      hora: pieza.horaHabitual,
-      estado: 'pendiente',
-      revisar: false,
-    };
+    return copiarPieza(pieza, diaD, desplazamiento);
   });
   // `sort` es estable: las que empatan en fecha y hora conservan el orden de la estrategia.
   return generadas.sort(compararFechaYHora);

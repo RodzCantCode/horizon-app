@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  copiarPieza,
   diaPermitido,
   estrategiaDisponible,
   estrategiasParaPlanificar,
@@ -240,6 +241,31 @@ describe('estrategiasParaPlanificar', () => {
     const piezas = piezasDePrueba();
     expect(estrategiasParaPlanificar([e1, e3], piezas, false).map((e) => e.id)).toEqual(['e3']);
     expect(estrategiasParaPlanificar([e1, e2, e3, e4], piezas, true).map((e) => e.id)).toEqual(['e1', 'e2']);
+  });
+});
+
+describe('copiarPieza', () => {
+  it('copia los datos de la pieza en ese día respecto a D, con su hora habitual y pendiente', () => {
+    expect(copiarPieza(pieza('rp'), '2026-10-16', 1)).toEqual({
+      piezaId: 'rp',
+      nombre: 'Clip principal',
+      nombreCorto: 'Clip principal',
+      formato: 'reel',
+      canales: ['ig', 'tiktok', 'shorts'],
+      diasPreparacion: 2,
+      desplazamiento: 1,
+      fecha: '2026-10-17',
+      hora: '18:00',
+      estado: 'pendiente',
+      revisar: false,
+    });
+  });
+
+  it('los canales son una copia: cambiar los de la pieza después no la cambia', () => {
+    const original = pieza('t2');
+    const copia = copiarPieza(original, '2026-10-16', 4);
+    original.canales.push('shorts');
+    expect(copia.canales).toEqual(['ig', 'tiktok']);
   });
 });
 
