@@ -5,8 +5,8 @@ Repo público. Previsto en `app.horizonsport.co`.
 
 App de Next.js con login de Supabase. Para arrancarla en local (Node 22): `npm install`, copia
 `.env.example` como `.env.local` y rellénalo, y `npm run dev`. De momento tiene la pantalla de
-entrar, el acceso por invitación ([docs/acceso.md](docs/acceso.md)), Ajustes y la pantalla Semanas
-(de momento, solo para ver).
+entrar, el acceso por invitación ([docs/acceso.md](docs/acceso.md)), Ajustes y la pantalla Semanas,
+donde cada pieza se abre en un panel y se marca como programada.
 
 El prototipo estático de octubre está en `prototipo/index.html`: ábrelo en el navegador. Guarda los
 datos en el navegador de cada uno.

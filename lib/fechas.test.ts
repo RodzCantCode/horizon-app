@@ -3,6 +3,7 @@ import {
   diaSemana,
   diasEntre,
   existeEnMadrid,
+  fechaEnMadrid,
   hoyEnMadrid,
   lunesDe,
   sumarDias,
@@ -104,6 +105,15 @@ describe('hoyEnMadrid', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-15T22:30:00Z'));
     expect(hoyEnMadrid()).toBe('2026-10-16');
+  });
+});
+
+describe('fechaEnMadrid', () => {
+  it('da el día de España de un instante guardado en UTC, también de madrugada', () => {
+    // Así llega `registro.creado_en` desde Supabase.
+    expect(fechaEnMadrid(new Date('2026-10-14T21:59:59.123456+00:00'))).toBe('2026-10-14');
+    expect(fechaEnMadrid(new Date('2026-10-14T22:30:00+00:00'))).toBe('2026-10-15');
+    expect(fechaEnMadrid(new Date('2026-12-31T23:30:00Z'))).toBe('2027-01-01');
   });
 });
 

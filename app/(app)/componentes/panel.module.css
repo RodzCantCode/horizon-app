@@ -1,0 +1,44 @@
+/* El panel de detalle (Panel.tsx): el Drawer de Mochi en escritorio y su Dialog en hoja en el móvil.
+   Mochi pone la forma, los colores y el movimiento; aquí solo el titular con la voz ancha de Horizon
+   (como en la maqueta) y el botón de cerrar de la hoja. Mochi pinta los paneles al final de <body>,
+   fuera de la página: sus clases se alcanzan con :global desde la del panel. */
+
+.lateral :global(.mochi-drawer__title),
+.hoja :global(.mochi-dialog__title) {
+  font-stretch: 118%;
+  font-weight: 800;
+  font-size: 1.75rem;
+  line-height: 1.05;
+  letter-spacing: -0.012em;
+  text-transform: uppercase;
+  overflow-wrap: break-word;
+}
+
+.hoja :global(.mochi-dialog__title) {
+  font-size: 1.375rem;
+  /* Hueco para el botón de cerrar, que va en la esquina. */
+  padding-right: 3.25rem;
+}
+
+/* El botón de cerrar de la hoja, arriba a la derecha y a la altura del título. Se coloca respecto al
+   contenido de la hoja (Mochi lo posiciona), no al cuerpo que se desplaza: así no se va con él. Con
+   la clase de la hoja delante, para ganar al position: relative de los botones de Mochi. */
+.hoja .cerrar {
+  position: absolute;
+  top: 1.25rem;
+  right: 1rem;
+  z-index: 1;
+}
+
+/* Recibe el foco al abrir para que el lector de pantalla empiece por el panel, pero no es un control:
+   sin anillo. */
+.cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.cuerpo:focus,
+.cuerpo:focus-visible {
+  outline: none;
+}

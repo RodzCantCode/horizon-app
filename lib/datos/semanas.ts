@@ -1,6 +1,7 @@
-// Lectura de las semanas desde Supabase (solo en el servidor: usa las cookies de la sesión). Aquí se
-// pasan las filas de la base (snake_case, `lib/supabase/tipos.ts`) a los tipos de la app
-// (`lib/tipos.ts`), para que las pantallas y `lib/semanas.ts` no vean nunca las de la base.
+// Lectura de las semanas, y de una pieza para su panel, desde Supabase (solo en el servidor: usa las
+// cookies de la sesión). Aquí se pasan las filas de la base (snake_case, `lib/supabase/tipos.ts`) a
+// los tipos de la app (`lib/tipos.ts`), para que las pantallas y `lib/semanas.ts` no vean nunca las
+// de la base.
 
 import { crearClienteServidor } from '@/lib/supabase/servidor';
 import type { Tables } from '@/lib/supabase/tipos';
@@ -81,4 +82,26 @@ export async function leerSemanas(
     planes: (planes.data ?? []).map(aPlan),
     piezas: (piezas.data ?? []).map(aPiezaDePlan),
   };
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Una pieza de plan por su id, con su plan (para el panel de la pieza). `null` si no existe: otra
+ * persona la ha quitado, o el id de la URL no es un id (escrito a mano); eso no se le pregunta a la
+ * base, que respondería con un error. Si Supabase falla, lanza un error.
+ */
+export async function leerPiezaDePlan(id: string): Promise<{ pieza: PiezaDePlan; plan: Plan } | null> {
+  if (!UUID.test(id)) return null;
+
+  const supabase = await crearClienteServidor();
+  const { data, error } = await supabase
+    .from('plan_piezas')
+    .select('*, planes(*)')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) throw new Error('No se ha podido leer la pieza', { cause: error });
+  if (data === null) return null;
+  return { pieza: aPiezaDePlan(data), plan: aPlan(data.planes) };
 }

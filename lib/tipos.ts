@@ -68,3 +68,14 @@ export type Plan = {
   estrategiaId: string | null;
   estrategiaNombre: string;
 };
+
+/**
+ * Una anotación del registro (quién hizo qué y cuándo), ya con el nombre de la persona. `accion` es
+ * la que escribe la base: crear, editar, borrar, programar, volver_a_pendiente o mover. `creadoEn` es
+ * un instante ISO (la única fecha de la app que no es de reloj en Madrid).
+ */
+export type EntradaRegistro = {
+  nombre: string;
+  accion: string;
+  creadoEn: string;
+};

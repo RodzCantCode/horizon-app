@@ -1,10 +1,11 @@
 // Lógica pura de la pantalla Semanas: qué semanas se ven, qué plan y qué piezas tiene cada día, y
-// los textos de sus encabezados. Sin acceso a datos: recibe los planes y las piezas ya leídos
-// (`lib/datos/semanas.ts`) y el día de hoy en España (`hoyEnMadrid`), así se prueba entera.
+// los textos de sus encabezados y del panel de una pieza. Sin acceso a datos: recibe los planes, las
+// piezas y el registro ya leídos (`lib/datos/`) y el día de hoy en España (`hoyEnMadrid`), así se
+// prueba entera.
 
-import { diaSemana, lunesDe, sumarDias } from '@/lib/fechas';
+import { diaSemana, fechaEnMadrid, lunesDe, sumarDias } from '@/lib/fechas';
 import { compararFechaYHora, necesitaAtencion } from '@/lib/planes';
-import type { PiezaDePlan, Plan } from '@/lib/tipos';
+import type { Canal, EntradaRegistro, Formato, PiezaDePlan, Plan } from '@/lib/tipos';
 
 export type PosicionSemana = 'pasada' | 'actual' | 'siguiente' | 'lejana';
 
@@ -146,4 +147,63 @@ export function resumenPlegada(semana: VistaSemana): string {
   const cabeza = datosPlan(plan ? { ...plan, invitado: null, tema: null } : null);
   const piezas = resumenPiezas(semana.dias.flatMap((d) => d.piezas));
   return piezas === null ? cabeza : `${cabeza} · ${piezas}`;
+}
+
+// --- Panel de una pieza ----------------------------------------------
+
+const DIAS_LARGOS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+/** «D», «D-1», «D+4». */
+function posicionRespectoAD(desplazamiento: number): string {
+  if (desplazamiento === 0) return 'D';
+  return desplazamiento > 0 ? `D+${desplazamiento}` : `D${desplazamiento}`;
+}
+
+/** Cuándo se publica y dónde cae respecto al episodio: «Viernes 16 oct · 18:00 · D». */
+export function fechaYPosicion(p: PiezaDePlan): string {
+  const { dia, mes } = diaYMes(p.fecha);
+  const fecha = `${DIAS_LARGOS[diaSemana(p.fecha)]} ${dia} ${mes}`;
+  return [fecha, p.hora, posicionRespectoAD(p.desplazamiento)].filter(Boolean).join(' · ');
+}
+
+const TEXTO_AVISO = { 'va-justa': 'va justa', revisar: 'revisar en Metricool' } as const;
+
+/** «Programada», «Pendiente» y, si pide atención, por qué: «Pendiente · va justa». */
+export function estadoDePieza(p: PiezaDePlan, hoy: string): string {
+  const estado = p.estado === 'programada' ? 'Programada' : 'Pendiente';
+  const aviso = avisoDePieza(p, hoy);
+  return aviso ? `${estado} · ${TEXTO_AVISO[aviso]}` : estado;
+}
+
+const FORMATOS: Record<Formato, string> = { reel: 'Reel', slide: 'Slide' };
+const CANALES: Record<Canal, string> = { ig: 'Instagram', tiktok: 'TikTok', shorts: 'Shorts' };
+
+export function textoFormato(formato: Formato): string {
+  return FORMATOS[formato];
+}
+
+/** «Instagram · TikTok · Shorts». */
+export function textoCanales(canales: Canal[]): string {
+  return canales.map((c) => CANALES[c]).join(' · ');
+}
+
+/** «1 día», «3 días». */
+export function textoPreparacion(dias: number): string {
+  return dias === 1 ? '1 día' : `${dias} días`;
+}
+
+// Las frases hablan de una pieza («la»). Una acción que no está aquí se lee «la cambió».
+const VERBOS: Record<string, string> = {
+  crear: 'la creó',
+  editar: 'la editó',
+  borrar: 'la quitó',
+  programar: 'la marcó como programada',
+  volver_a_pendiente: 'la devolvió a pendiente',
+  mover: 'la movió',
+};
+
+/** «Ana la marcó como programada · 14 oct», con el día de España en que se hizo. */
+export function fraseDeRegistro(e: EntradaRegistro): string {
+  const { dia, mes } = diaYMes(fechaEnMadrid(new Date(e.creadoEn)));
+  return `${e.nombre} ${VERBOS[e.accion] ?? 'la cambió'} · ${dia} ${mes}`;
 }

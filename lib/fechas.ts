@@ -55,7 +55,12 @@ export function diasEntre(desde: string, hasta: string): number {
 
 /** Día de hoy en España. De madrugada (00:30 allí) no es el de UTC. */
 export function hoyEnMadrid(ahora: Date = new Date()): string {
-  return relojEnMadrid(ahora).fecha;
+  return fechaEnMadrid(ahora);
+}
+
+/** Día de España en que cayó un instante, como `registro.creado_en` (que se guarda en UTC). */
+export function fechaEnMadrid(instante: Date): string {
+  return relojEnMadrid(instante).fecha;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { leerSemanas } from '@/lib/datos/semanas';
+import { leerPiezaDePlan, leerSemanas } from '@/lib/datos/semanas';
 import type { Tables } from '@/lib/supabase/tipos';
 
 // Cliente de Supabase simulado (vi.mock se eleva por encima de los import): cada consulta apunta las
@@ -16,9 +16,11 @@ function consultaSimulada(tabla: string) {
   };
   const constructor = {
     select: encadenar('select'),
+    eq: encadenar('eq'),
     gte: encadenar('gte'),
     lte: encadenar('lte'),
     order: encadenar('order'),
+    maybeSingle: encadenar('maybeSingle'),
     then: (resolver: (r: unknown) => unknown, rechazar: (e: unknown) => unknown) =>
       Promise.resolve(consulta.resultado).then(resolver, rechazar),
   };
@@ -133,5 +135,34 @@ describe('leerSemanas', () => {
 
     preparar({ data: [], error: null }, { data: [{ ...filaPieza, canales: ['ig', 'x'] }], error: null });
     await expect(leerSemanas('2026-10-05', '2026-11-01')).rejects.toThrow('«x»');
+  });
+});
+
+describe('leerPiezaDePlan', () => {
+  const ID = 'b4b4b4b4-0000-4000-8000-000000000004';
+
+  it('lee la pieza por su id con su plan y las pasa a los tipos de la app', async () => {
+    preparar({ data: [], error: null }, { data: { ...filaPieza, id: ID, planes: filaPlan }, error: null });
+    const leida = await leerPiezaDePlan(ID);
+
+    expect(consultas.get('plan_piezas')!.llamadas).toContainEqual(['eq', 'id', ID]);
+    expect(leida?.pieza).toEqual(expect.objectContaining({ id: ID, planId: 'plan05', hora: '18:00' }));
+    expect(leida?.plan).toEqual(expect.objectContaining({ id: 'plan05', diaD: '2026-10-16', numero: '05' }));
+  });
+
+  it('si no existe (otra persona la ha quitado), devuelve null', async () => {
+    preparar({ data: [], error: null }, { data: null, error: null });
+    expect(await leerPiezaDePlan(ID)).toBe(null);
+  });
+
+  it('un id que no es un uuid (URL escrita a mano) es una pieza que no existe, sin preguntar a la base', async () => {
+    preparar({ data: [], error: null }, { data: null, error: { code: '22P02', message: 'invalid input syntax for type uuid' } });
+    expect(await leerPiezaDePlan('no-es-un-id')).toBe(null);
+    expect(consultas.get('plan_piezas')!.llamadas).toEqual([]);
+  });
+
+  it('si Supabase falla, lanza un error', async () => {
+    preparar({ data: [], error: null }, { data: null, error: { message: 'caído' } });
+    await expect(leerPiezaDePlan(ID)).rejects.toThrow('No se ha podido leer la pieza');
   });
 });

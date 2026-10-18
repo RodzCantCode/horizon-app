@@ -3,10 +3,16 @@ import {
   avisoDePieza,
   construirSemanas,
   datosPlan,
+  estadoDePieza,
   etiquetaDia,
   etiquetaSemana,
+  fechaYPosicion,
+  fraseDeRegistro,
   rangoSemanas,
   resumenPlegada,
+  textoCanales,
+  textoFormato,
+  textoPreparacion,
 } from '@/lib/semanas';
 import type { PiezaDePlan, Plan } from '@/lib/tipos';
 
@@ -221,5 +227,63 @@ describe('resumenPlegada', () => {
     expect(resumenPlegada(semana(planEp05, []))).toBe('Ep 05');
     expect(resumenPlegada(semana(null, []))).toBe('Sin planificar');
     expect(resumenPlegada(semana(null, piezasEp05().slice(1, 2)))).toBe('Sin planificar · 1 pieza, pendiente');
+  });
+});
+
+describe('fechaYPosicion', () => {
+  it('día de la semana, fecha, hora y posición respecto al día D', () => {
+    const [, clipPrincipal, clipSecundario, valor] = piezasEp05();
+    expect(fechaYPosicion(clipPrincipal)).toBe('Viernes 16 oct · 18:00 · D');
+    expect(fechaYPosicion(clipSecundario)).toBe('Domingo 18 oct · D+2');
+    expect(fechaYPosicion(valor)).toBe('Martes 20 oct · D+4');
+    expect(fechaYPosicion(piezasEp05()[0])).toBe('Jueves 15 oct · D-1');
+  });
+});
+
+describe('estadoDePieza', () => {
+  const [historia, clipPrincipal, clipSecundario] = piezasEp05();
+
+  it('el estado y, si pide atención, por qué', () => {
+    expect(estadoDePieza(historia, '2026-10-15')).toBe('Programada');
+    expect(estadoDePieza(clipSecundario, '2026-10-15')).toBe('Pendiente');
+    expect(estadoDePieza(clipPrincipal, '2026-10-15')).toBe('Pendiente · va justa');
+    expect(estadoDePieza({ ...clipSecundario, revisar: true }, '2026-10-12')).toBe(
+      'Pendiente · revisar en Metricool',
+    );
+  });
+});
+
+describe('textos de los datos de una pieza', () => {
+  it('formato, canales y días de preparación', () => {
+    expect(textoFormato('reel')).toBe('Reel');
+    expect(textoFormato('slide')).toBe('Slide');
+    expect(textoCanales(['ig', 'tiktok', 'shorts'])).toBe('Instagram · TikTok · Shorts');
+    expect(textoCanales(['tiktok'])).toBe('TikTok');
+    expect(textoPreparacion(1)).toBe('1 día');
+    expect(textoPreparacion(3)).toBe('3 días');
+    expect(textoPreparacion(0)).toBe('0 días');
+  });
+});
+
+describe('fraseDeRegistro', () => {
+  const entrada = { nombre: 'Ana', accion: 'programar', creadoEn: '2026-10-14T09:12:33.123456+00:00' };
+
+  it('quién, qué y el día', () => {
+    expect(fraseDeRegistro(entrada)).toBe('Ana la marcó como programada · 14 oct');
+    expect(fraseDeRegistro({ ...entrada, accion: 'volver_a_pendiente' })).toBe('Ana la devolvió a pendiente · 14 oct');
+    expect(fraseDeRegistro({ ...entrada, accion: 'mover' })).toBe('Ana la movió · 14 oct');
+    expect(fraseDeRegistro({ ...entrada, accion: 'editar' })).toBe('Ana la editó · 14 oct');
+    expect(fraseDeRegistro({ ...entrada, accion: 'crear', nombre: 'Sistema' })).toBe('Sistema la creó · 14 oct');
+    expect(fraseDeRegistro({ ...entrada, accion: 'borrar' })).toBe('Ana la quitó · 14 oct');
+  });
+
+  it('el día es el de España aunque en UTC aún sea el anterior', () => {
+    expect(fraseDeRegistro({ ...entrada, creadoEn: '2026-10-14T22:30:00+00:00' })).toBe(
+      'Ana la marcó como programada · 15 oct',
+    );
+  });
+
+  it('una acción que no conoce no rompe la frase', () => {
+    expect(fraseDeRegistro({ ...entrada, accion: 'otra' })).toBe('Ana la cambió · 14 oct');
   });
 });

@@ -161,7 +161,8 @@ publicable; las dos son públicas por diseño). `.env.local` no se sube. La clav
 | --- | --- |
 | `app/layout.tsx` | Raíz: fuente, estilos de Mochi y el guion que pone el tema elegido antes de pintar (claro, oscuro o sistema: `lib/tema.ts`) |
 | `app/global.css` | Tokens de Horizon (tema oscuro y claro) y variables de Mochi |
-| `app/(app)/` | Lo que va con cabecera (Semanas `/`, Estrategias, Ajustes). Semanas es `page.tsx` con sus componentes en `semanas/`; de momento solo se lee: pulsar una pieza o **Planificar** deja `?pieza=` o `?planificar=` en la URL para los paneles |
+| `app/(app)/` | Lo que va con cabecera (Semanas `/`, Estrategias, Ajustes). Semanas es `page.tsx` con sus componentes en `semanas/`: pulsar una pieza abre su panel (`?pieza=<id>` en la URL: estado y registro, sobrevive a una recarga); **Planificar** deja `?planificar=` para el panel que vendrá. Acciones de servidor en `semanas/acciones.ts`. Si una lectura falla, `error.tsx` |
+| `app/(app)/componentes/` | `Panel.tsx`: el panel de detalle de todas las pantallas (Drawer de Mochi a la derecha; por debajo de 768 px, su Dialog en hoja) |
 | `app/entrar/` | `/entrar`: correo y contraseña. Sin registro: solo por invitación |
 | `app/auth/confirmar/`, `app/crear-contrasena/` | Adonde lleva el enlace de los correos de invitación y recuperación, y **Crea tu contraseña**. Lo que se configura en Supabase: [docs/acceso.md](docs/acceso.md) |
 | `proxy.ts` | Corre antes de cada ruta (en Next.js 16 el `middleware` se llama `proxy`): refresca la sesión y decide adónde va cada uno (`lib/supabase/rutas.ts`) |
