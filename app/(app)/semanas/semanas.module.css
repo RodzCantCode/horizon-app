@@ -1,0 +1,382 @@
+/* Pantalla Semanas (la maqueta de docs/diseno.md): la actual abierta, la siguiente debajo y más
+   tenue, y las pasadas y lejanas plegadas en una línea. En escritorio los días van en fila, siete
+   columnas; en pantallas estrechas, en lista, y en el móvil los encabezados se apilan (al final del
+   archivo). Solo tokens de app/global.css. */
+
+/* --- Semana abierta (actual y siguiente) ---------------------------- */
+.semana {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'titulos lateral'
+    'dias dias';
+  align-items: end;
+  gap: 1.25rem 1.5rem;
+}
+
+.semana[data-posicion='siguiente'] {
+  align-items: center;
+  row-gap: 1rem;
+  padding-top: 0.5rem;
+}
+
+.titulos {
+  grid-area: titulos;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.semana[data-posicion='siguiente'] .titulos {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1.25rem;
+}
+
+.fechas {
+  font-size: clamp(2.125rem, 5vw, 2.75rem);
+}
+
+.semana[data-posicion='siguiente'] .fechas {
+  font-size: 1.625rem;
+  color: var(--papel-medio);
+}
+
+.datos {
+  font-size: 1rem;
+  color: var(--papel-medio);
+}
+
+.semana[data-posicion='siguiente'] .datos {
+  font-size: 0.9375rem;
+}
+
+/* «Sin planificar» de la semana siguiente: el único aviso de la pantalla. */
+.datos[data-aviso] {
+  color: var(--ambar);
+}
+
+.lateral {
+  grid-area: lateral;
+}
+
+.estrategia {
+  font-size: 0.875rem;
+  color: var(--papel-tenue);
+}
+
+/* --- Días ------------------------------------------------------------ */
+.dias {
+  grid-area: dias;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.dia {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 10.5rem;
+  padding: 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 14px;
+}
+
+.dia[data-hoy] {
+  background: var(--tinta-800);
+  border-color: var(--linea-fuerte);
+}
+
+.semana[data-posicion='siguiente'] .dia {
+  gap: 0.375rem;
+  min-height: 5.75rem;
+  border: 1px dashed var(--linea);
+}
+
+.etiquetaDia {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--papel-tenue);
+}
+
+.dia[data-hoy] .etiquetaDia {
+  color: var(--azul-texto);
+}
+
+/* --- Piezas ---------------------------------------------------------- */
+.piezas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pieza {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  line-height: 1.25;
+  color: var(--papel);
+  transition: border-color 0.18s ease;
+}
+
+@media (hover: hover) {
+  .pieza:hover {
+    border-color: var(--linea-fuerte);
+  }
+}
+
+/* En la siguiente y en las plegadas, más pequeñas y tenues. */
+.semana[data-posicion='siguiente'] .pieza,
+.plegada .pieza {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--papel-medio);
+}
+
+/* Justo por encima de 1024 px alguna palabra larga aún no cabe en la columna: se parte con guion
+   (el idioma lo da <html lang="es">). */
+.texto {
+  min-width: 0;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.hora {
+  font-stretch: 75%;
+  font-weight: 600;
+  color: var(--papel-medio);
+  white-space: nowrap;
+}
+
+/* Hueca si está pendiente, rellena si está programada, ámbar si pide atención. */
+.marca {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--papel-tenue);
+  border-radius: 999px;
+}
+
+.marca[data-estado='programada'] {
+  background: var(--papel);
+  border-color: var(--papel);
+}
+
+.marca[data-atencion] {
+  border-color: var(--ambar);
+}
+
+.marca[data-estado='programada'][data-atencion] {
+  background: var(--ambar);
+}
+
+/* El aviso en texto solo se ve en la lista (pantallas estrechas), donde hay sitio, como en la
+   maqueta del móvil. */
+.aviso {
+  display: none;
+}
+
+/* --- Semana plegada (pasadas y lejanas) ------------------------------ */
+.plegada {
+  border-bottom: 1px solid var(--linea);
+}
+
+.plegada[data-posicion='lejana'] {
+  border-bottom: 0;
+  border-top: 1px solid var(--linea);
+}
+
+.linea {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.875rem 0;
+  color: var(--papel-tenue);
+  cursor: pointer;
+  list-style: none;
+  transition: color 0.18s ease;
+}
+
+.linea::-webkit-details-marker {
+  display: none;
+}
+
+@media (hover: hover) {
+  .linea:hover {
+    color: var(--papel-medio);
+  }
+}
+
+.fechasPlegada {
+  min-width: 6.875rem;
+  font-stretch: 112%;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.resumen {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flecha {
+  font-size: 0.875rem;
+  transition: transform 0.18s ease;
+}
+
+.plegada[open] .flecha {
+  transform: rotate(90deg);
+}
+
+.contenidoPlegada {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-bottom: 1rem;
+}
+
+.plegada .dia {
+  gap: 0.375rem;
+  min-height: 4.5rem;
+  padding: 0.625rem;
+}
+
+.plegada .pieza {
+  border-radius: 8px;
+}
+
+/* --- Pantalla estrecha: los días en lista ---------------------------- */
+/* La maqueta pone la lista en el móvil. Aquí empieza antes, por debajo de 1024 px: en siete columnas
+   más estrechas, a una palabra como «secundario» (unos 70 px) ya no le cabe el hueco que le deja la
+   columna y se parte en trozos. */
+@media (max-width: 63.99rem) {
+  .dias {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .dia,
+  .semana[data-posicion='siguiente'] .dia,
+  .plegada .dia {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    align-items: start;
+    gap: 0 0.875rem;
+    min-height: 0;
+    padding: 0.6875rem 0;
+    border: 0;
+    border-bottom: 1px solid var(--linea);
+    border-radius: 0;
+  }
+
+  /* Sin línea bajo el último día que se ve: el que no tiene detrás ninguno con piezas ni hoy. */
+  .dias > .dia:not([data-hoy]):not(:has(~ .dia:not([data-vacio]), ~ .dia[data-hoy])) {
+    border-bottom: 0;
+  }
+
+  /* Solo los días con piezas, y hoy aunque no tenga. */
+  .dia[data-vacio]:not([data-hoy]) {
+    display: none;
+  }
+
+  .dia[data-hoy] {
+    margin-inline: -0.75rem;
+    padding-inline: 0.75rem;
+    border: 1px solid var(--linea-fuerte);
+    border-radius: 12px;
+  }
+
+  .etiquetaDia {
+    font-size: 0.8125rem;
+    padding-top: 0.0625rem;
+  }
+
+  /* Hoy se llama «Hoy», sin la fecha. */
+  .dia[data-hoy] .fechaDia {
+    display: none;
+  }
+
+  .piezas {
+    gap: 0.625rem;
+  }
+
+  .pieza,
+  .semana[data-posicion='siguiente'] .pieza,
+  .plegada .pieza {
+    gap: 0.875rem;
+    padding: 0;
+    border: 0;
+    font-size: 0.9375rem;
+  }
+
+  .aviso {
+    display: inline;
+    margin-left: auto;
+    font-size: 0.8125rem;
+    color: var(--ambar);
+    white-space: nowrap;
+  }
+}
+
+/* --- Móvil: encabezados apilados ------------------------------------- */
+@media (max-width: 47.99rem) {
+  .semana {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'titulos'
+      'dias'
+      'lateral';
+    gap: 0.875rem;
+  }
+
+  /* La siguiente, en una tarjeta con borde discontinuo y Planificar al final. */
+  .semana[data-posicion='siguiente'] {
+    padding: 1.125rem;
+    border: 1px dashed var(--linea-fuerte);
+    border-radius: 16px;
+  }
+
+  .semana[data-posicion='siguiente'] .titulos {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.375rem;
+  }
+
+  .semana[data-posicion='siguiente'] .fechas {
+    font-size: 1.375rem;
+  }
+
+  .linea {
+    gap: 0.75rem;
+  }
+
+  .fechasPlegada {
+    min-width: 0;
+  }
+}

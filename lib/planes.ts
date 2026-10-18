@@ -8,7 +8,10 @@ import { diaSemana, diasEntre, sumarDias } from '@/lib/fechas';
 import type { Estrategia, NuevaPiezaDePlan, Pieza, PiezaDePlan, Plan } from '@/lib/tipos';
 
 /** Por fecha; dentro del día, por hora y con las que no tienen hora al final. */
-function compararFechaYHora(a: NuevaPiezaDePlan, b: NuevaPiezaDePlan): number {
+export function compararFechaYHora(
+  a: Pick<NuevaPiezaDePlan, 'fecha' | 'hora'>,
+  b: Pick<NuevaPiezaDePlan, 'fecha' | 'hora'>,
+): number {
   if (a.fecha !== b.fecha) return a.fecha < b.fecha ? -1 : 1;
   if (a.hora === b.hora) return 0;
   if (a.hora === null) return 1;

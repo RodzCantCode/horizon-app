@@ -1,21 +1,8 @@
-/* La cabecera (app/(app)/cabecera.tsx) ya da el aire de arriba. */
+/* La cabecera (app/(app)/cabecera.tsx) ya da el aire de arriba. Las semanas van una debajo de otra;
+   cada una se pinta en app/(app)/semanas/. */
 .pagina {
-  padding: 0 var(--margen) clamp(2rem, 5vw, 3rem);
-}
-
-.sesion {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  min-width: 0;
-}
-
-/* Un correo largo se corta con puntos suspensivos en vez de empujar el botón fuera. */
-.correo {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-transform: none;
-  letter-spacing: 0.04em;
+  flex-direction: column;
+  gap: 1.75rem;
+  padding: 0 var(--margen) clamp(2rem, 5vw, 3rem);
 }

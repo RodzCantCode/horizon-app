@@ -135,6 +135,9 @@ textos de ayuda tipo tooltip. Debe funcionar bien en el móvil.
   github:RodzCantCode/mochi#vX.Y.Z` y revisar botones y campos en escritorio y móvil.
 - En Next.js los botones de Mochi se hidratan y miden su ancho con JavaScript (estilo en línea), así
   que una clase con `width: 100%` no los ensancha. Van con su ancho natural.
+- `LinkButton as={Link}` solo va en un componente de cliente: desde uno de servidor, el prerender
+  falla («Functions cannot be passed directly to Client Components»). Se envuelve en uno de cliente,
+  como `app/(app)/semanas/BotonPlanificar.tsx`.
 - Fuente: Archivo desde `next/font/google` con el eje `wdth` (`app/layout.tsx`).
 
 ## Comandos
@@ -158,17 +161,19 @@ publicable; las dos son públicas por diseño). `.env.local` no se sube. La clav
 | --- | --- |
 | `app/layout.tsx` | Raíz: fuente, estilos de Mochi y el guion que pone el tema elegido antes de pintar (claro, oscuro o sistema: `lib/tema.ts`) |
 | `app/global.css` | Tokens de Horizon (tema oscuro y claro) y variables de Mochi |
-| `app/(app)/` | Lo que va con cabecera (Semanas `/`, Estrategias, Ajustes). `/` sigue siendo la portada provisional: correo y «Salir» |
+| `app/(app)/` | Lo que va con cabecera (Semanas `/`, Estrategias, Ajustes). Semanas es `page.tsx` con sus componentes en `semanas/`; de momento solo se lee: pulsar una pieza o **Planificar** deja `?pieza=` o `?planificar=` en la URL para los paneles |
 | `app/entrar/` | `/entrar`: correo y contraseña. Sin registro: solo por invitación |
 | `app/auth/confirmar/`, `app/crear-contrasena/` | Adonde lleva el enlace de los correos de invitación y recuperación, y **Crea tu contraseña**. Lo que se configura en Supabase: [docs/acceso.md](docs/acceso.md) |
 | `proxy.ts` | Corre antes de cada ruta (en Next.js 16 el `middleware` se llama `proxy`): refresca la sesión y decide adónde va cada uno (`lib/supabase/rutas.ts`) |
 | `lib/supabase/` | Clientes de Supabase con `@supabase/ssr`: `navegador.ts`, `servidor.ts` y `sesion.ts` (el del proxy); `rutas.ts`, qué rutas piden sesión |
+| `lib/datos/` | Lecturas de Supabase en el servidor. Pasan las filas de la base (snake_case) a los tipos de `lib/tipos.ts`: las pantallas y la lógica de `lib/` no ven las de la base |
 | `docs/acceso.md` | Cómo invitar, cómo mandar una recuperación y qué configurar en Supabase |
 | `prototipo/index.html` | Prototipo de octubre: referencia del modelo, no de la interfaz. No se sirve |
 | `AGENTS.md` | Lo escribe `next dev`: avisa a los agentes de que lean la documentación de Next que viene en `node_modules/next/dist/docs/`. No se edita a mano |
 
 Next.js 16 con Cache Components activado (`next.config.ts`, lo que trae `create-next-app`): lo que
-lee la petición (cookies, sesión) va dentro de `<Suspense>`, como `Sesion` en `app/(app)/page.tsx`.
+lee la petición (cookies, sesión) va dentro de `<Suspense>`, como `ListaSemanas` en
+`app/(app)/page.tsx`.
 
 ## Convenciones
 
