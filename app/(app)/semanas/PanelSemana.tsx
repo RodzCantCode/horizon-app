@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, useEffect, useId, useRef, useState, useTransition, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Button, PencilIcon, RadioGroup, Select, TextField } from 'mochi-ui';
@@ -8,6 +8,7 @@ import { esFecha, existeEnMadrid, lunesDe, normalizarHora } from '@/lib/fechas';
 import { estrategiasParaPlanificar } from '@/lib/planes';
 import { diasDelPlan, etiquetaDia, fechaLarga, tituloSemana } from '@/lib/semanas';
 import type { Estrategia, Pieza, PiezaDePlan, Plan } from '@/lib/tipos';
+import { BotonesGuardar, useEnvio } from '../componentes/edicion';
 import { Panel, useFocoAlCambiarDeVista, useMientrasSeCierra } from '../componentes/Panel';
 import {
   anadirPiezaSuelta,
@@ -28,10 +29,6 @@ export type DatosDeSemana = {
   /** Todas, archivadas incluidas: para descartar las estrategias que las usan. */
   piezas: Pieza[];
 };
-
-// Lo que se enseña si la acción ni siquiera llega al servidor (sin conexión, por ejemplo). El mismo
-// texto que en los otros paneles.
-const SIN_CONEXION = 'No se ha podido conectar. Vuelve a intentarlo.';
 
 type Vista = 'ver' | 'editar' | 'mover' | 'estrategia' | 'anadir';
 
@@ -187,66 +184,6 @@ function DatosSemana({
       </section>
     </>
   );
-}
-
-/** **Guardar** y **Cancelar** con el error debajo, como en los demás paneles. Azul solo Guardar. */
-function BotonesGuardar({
-  guardando,
-  error,
-  alCancelar,
-}: {
-  guardando: boolean;
-  error: string | null;
-  alCancelar: () => void;
-}) {
-  return (
-    <div className={estilos.accionPieza}>
-      <div className={estilos.botones}>
-        <Button type="submit" variant="accent" status={guardando ? 'loading' : 'idle'} loadingLabel="Guardando">
-          Guardar
-        </Button>
-        <Button variant="surface" onClick={alCancelar}>
-          Cancelar
-        </Button>
-      </div>
-      <p className={estilos.errorPieza} role="alert">
-        {error}
-      </p>
-    </div>
-  );
-}
-
-/**
- * El envío de una vista del modo edición: su estado (el botón carga mientras dura) y su error. Las
- * acciones refrescan la página al terminar; `siVaBien` se llama dentro de la transición, para que la
- * vista cambie a la vez que llegan los datos nuevos y no antes. Con `siError` una vista puede tratar
- * un error a su manera (devuelve `true` si lo ha tratado); si no, se enseña bajo los botones.
- */
-function useEnvio() {
-  const [enviando, iniciar] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  function enviar(
-    accion: () => Promise<{ error?: string }>,
-    siVaBien: () => void,
-    siError?: (error: string) => boolean,
-  ) {
-    if (enviando) return;
-    setError(null);
-    iniciar(async () => {
-      try {
-        const { error: aviso } = await accion();
-        startTransition(() => {
-          if (aviso === undefined) siVaBien();
-          else if (!siError?.(aviso)) setError(aviso);
-        });
-      } catch {
-        setError(SIN_CONEXION);
-      }
-    });
-  }
-
-  return { enviando, error, enviar };
 }
 
 /**

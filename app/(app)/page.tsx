@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { redirect } from 'next/navigation';
 import { Skeleton } from 'mochi-ui';
 import { leerEstrategiasYPiezas } from '@/lib/datos/estrategias';
 import { leerRegistroDe } from '@/lib/datos/registro';
@@ -7,8 +6,7 @@ import { leerPiezaDePlan, leerPlanDeSemana, leerPlanes, leerSemanas } from '@/li
 import { diaSemana, esFecha, hoyEnMadrid } from '@/lib/fechas';
 import { proponerDiaD, proponerNumero } from '@/lib/planes';
 import { construirSemanas, rangoSemanas } from '@/lib/semanas';
-import { crearClienteServidor } from '@/lib/supabase/servidor';
-import { rutaEntrar } from '@/lib/supabase/rutas';
+import { exigirSesion } from '@/lib/supabase/servidor';
 import { PanelPieza } from './semanas/PanelPieza';
 import { PanelPlanificar } from './semanas/PanelPlanificar';
 import { PanelSemana } from './semanas/PanelSemana';
@@ -49,14 +47,6 @@ function CargandoSemanas() {
       <Skeleton shape="block" height="10.5rem" />
     </div>
   );
-}
-
-// proxy.ts ya manda a /entrar a quien no tenga sesión; esta es la segunda llave, por si el proxy no
-// corre: sin sesión, la base no da permiso y se vería la página de error en vez de Entrar.
-async function exigirSesion() {
-  const supabase = await crearClienteServidor();
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) redirect(rutaEntrar);
 }
 
 // Lee la sesión de las cookies y los datos, así que va dentro de <Suspense>: con Cache Components, lo

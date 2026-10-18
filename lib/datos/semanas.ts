@@ -6,11 +6,9 @@
 import { compararFechaYHora } from '@/lib/planes';
 import { crearClienteServidor } from '@/lib/supabase/servidor';
 import type { Tables, TablesInsert } from '@/lib/supabase/tipos';
-import type { Canal, Estado, Formato, NuevaPiezaDePlan, PiezaDePlan, Plan } from '@/lib/tipos';
+import { CANALES, FORMATOS, type Estado, type NuevaPiezaDePlan, type PiezaDePlan, type Plan } from '@/lib/tipos';
 
-export const FORMATOS: readonly Formato[] = ['slide', 'reel'];
 const ESTADOS: readonly Estado[] = ['pendiente', 'programada'];
-export const CANALES: readonly Canal[] = ['ig', 'tiktok', 'shorts'];
 
 /**
  * La base guarda formato, estado y canales como texto. Un valor que la app no conoce es un fallo

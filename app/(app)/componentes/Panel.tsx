@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button, CloseIcon, Dialog, Drawer } from 'mochi-ui';
 import estilos from './panel.module.css';
 
@@ -127,4 +128,45 @@ export function useFocoAlCambiarDeVista(vista: string, contenedor: RefObject<HTM
       raiz?.querySelector<HTMLElement>('[data-foco]') ?? raiz?.querySelector<HTMLElement>('button, input, a[href]');
     destino?.focus({ preventScroll: true });
   }, [vista, contenedor]);
+}
+
+/**
+ * Un panel que se abre con un parámetro de la URL (`?pieza=<id>`, `?estrategia=nueva`…), como los de
+ * Semanas: está abierto mientras la URL lleve `parametro=valor`, así sobrevive a una recarga, y se
+ * cierra quitándolo con history.pushState, sin ir al servidor (se cierra al momento y con su
+ * animación; Atrás lo vuelve a abrir). `cerrar` lee la URL de ese momento, no la del último pintado:
+ * también se llama al terminar de guardar, y para entonces el panel puede estar cerrado.
+ *
+ * Al cerrarse, el foco vuelve a lo que lo abrió, marcado con `data-<parametro>="<valor>"` (Mochi lo
+ * devuelve a lo que lo tenía al abrir, pero tras una recarga no había nada y Safari no enfoca los
+ * enlaces al pulsarlos). Si está dentro de un <details> plegado, lo despliega antes.
+ */
+export function usePanelDeLaUrl(parametro: string, valor: string) {
+  const parametros = useSearchParams();
+  const abierto = parametros.get(parametro) === valor;
+
+  function cerrar() {
+    const siguientes = new URLSearchParams(window.location.search);
+    if (siguientes.get(parametro) !== valor) return;
+    siguientes.delete(parametro);
+    const consulta = siguientes.toString();
+    const ruta = window.location.pathname;
+    window.history.pushState(null, '', consulta ? `${ruta}?${consulta}` : ruta);
+  }
+
+  const estuvoAbierto = useRef(abierto);
+  useEffect(() => {
+    if (abierto) {
+      estuvoAbierto.current = true;
+      return;
+    }
+    if (!estuvoAbierto.current) return;
+    estuvoAbierto.current = false;
+    const destino = document.querySelector<HTMLElement>(`[data-${parametro}="${CSS.escape(valor)}"]`);
+    const plegado = destino?.closest('details');
+    if (plegado && !plegado.open) plegado.open = true;
+    destino?.focus();
+  }, [abierto, parametro, valor]);
+
+  return { abierto, cerrar };
 }

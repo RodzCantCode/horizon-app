@@ -5,6 +5,10 @@ export type Formato = 'slide' | 'reel';
 export type Canal = 'ig' | 'tiktok' | 'shorts';
 export type Estado = 'pendiente' | 'programada';
 
+/** Los formatos y los canales que hay, en el orden en que se enseñan. */
+export const FORMATOS: readonly Formato[] = ['slide', 'reel'];
+export const CANALES: readonly Canal[] = ['ig', 'tiktok', 'shorts'];
+
 /** Tipo de contenido que se puede poner en una estrategia. Se archiva, no se borra. */
 export type Pieza = {
   id: string;

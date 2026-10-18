@@ -2,10 +2,10 @@
 // sesión). Pasa sus filas a los tipos de la app (`Pieza` y `Estrategia`, en `lib/tipos.ts`), como
 // semanas.ts con las de los planes.
 
-import { CANALES, comprobar, FORMATOS } from '@/lib/datos/semanas';
+import { comprobar } from '@/lib/datos/semanas';
 import { crearClienteServidor } from '@/lib/supabase/servidor';
 import type { Tables } from '@/lib/supabase/tipos';
-import type { Estrategia, Pieza } from '@/lib/tipos';
+import { CANALES, FORMATOS, type Estrategia, type Pieza } from '@/lib/tipos';
 
 export function aPieza(fila: Tables<'piezas'>): Pieza {
   return {
