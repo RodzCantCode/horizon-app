@@ -8,6 +8,10 @@
 -- `authenticated` y la sesión de un usuario (auth.uid() lee el `sub` de request.jwt.claims).
 -- `reset role` vuelve al rol de quien ejecuta. Si un bloque falla sin esperarlo, el error queda
 -- anotado como fallo y el cambio de rol se deshace con el bloque.
+--
+-- Los planes de prueba van en semanas de 2099, como en funciones.sql, para no chocar con planes
+-- reales: un lunes solo puede tener un plan. Octubre de 2099 cae en los mismos días de la semana que
+-- el de 2026 (el 19 es lunes).
 
 begin;
 
@@ -190,18 +194,18 @@ declare
   acciones text;
   detalle_vuelta jsonb;
   esperado jsonb := '{"estado": {"antes": "programada", "despues": "pendiente"},
-                      "fecha": {"antes": "2026-10-24", "despues": "2026-10-25"},
+                      "fecha": {"antes": "2099-10-24", "despues": "2099-10-25"},
                       "revisar": {"antes": false, "despues": true}}';
 begin
   perform pg_temp.con_sesion('00000000-0000-4000-8000-0000000000a1');
   insert into public.planes (id, lunes, dia_d, con_episodio, estrategia_id, estrategia_nombre)
-  values ('00000000-0000-4000-8000-0000000000d1', '2026-10-19', '2026-10-23', true,
+  values ('00000000-0000-4000-8000-0000000000d1', '2099-10-19', '2099-10-23', true,
           '00000000-0000-4000-8000-0000000000c1', 'Estrategia de prueba');
   insert into public.plan_piezas (id, plan_id, pieza_id, nombre, nombre_corto, formato, canales,
                                   dias_preparacion, desplazamiento, fecha, hora)
   values ('00000000-0000-4000-8000-0000000000e1', '00000000-0000-4000-8000-0000000000d1',
           '00000000-0000-4000-8000-0000000000b1', 'T9 · Pieza de prueba', 'Pieza de prueba', 'reel',
-          '{ig}', 2, 0, '2026-10-23', '18:00');
+          '{ig}', 2, 0, '2099-10-23', '18:00');
   -- programar
   update public.plan_piezas set estado = 'programada'
    where id = '00000000-0000-4000-8000-0000000000e1';
@@ -209,10 +213,10 @@ begin
   update public.plan_piezas set hora = '19:30'
    where id = '00000000-0000-4000-8000-0000000000e1';
   -- mover (fecha)
-  update public.plan_piezas set fecha = '2026-10-24'
+  update public.plan_piezas set fecha = '2099-10-24'
    where id = '00000000-0000-4000-8000-0000000000e1';
   -- volver_a_pendiente: cambian estado y fecha a la vez; manda el estado
-  update public.plan_piezas set estado = 'pendiente', fecha = '2026-10-25', revisar = true
+  update public.plan_piezas set estado = 'pendiente', fecha = '2099-10-25', revisar = true
    where id = '00000000-0000-4000-8000-0000000000e1';
   -- editar
   update public.plan_piezas set revisar = false
@@ -286,28 +290,28 @@ begin
   perform pg_temp.con_sesion('00000000-0000-4000-8000-0000000000a1');
   begin
     insert into public.planes (lunes, dia_d, con_episodio, estrategia_nombre)
-    values ('2026-10-20', '2026-10-23', true, 'Prueba');
+    values ('2099-10-20', '2099-10-23', true, 'Prueba');
     fallos := fallos || 'aceptó un martes como lunes'::text;
   exception when check_violation then
     null;
   end;
   begin
     insert into public.planes (lunes, dia_d, con_episodio, estrategia_nombre)
-    values ('2026-10-26', '2026-10-25', true, 'Prueba');
+    values ('2099-10-26', '2099-10-25', true, 'Prueba');
     fallos := fallos || 'aceptó un día D anterior al lunes'::text;
   exception when check_violation then
     null;
   end;
   begin
     insert into public.planes (lunes, dia_d, con_episodio, estrategia_nombre)
-    values ('2026-10-26', '2026-11-02', true, 'Prueba');
+    values ('2099-10-26', '2099-11-02', true, 'Prueba');
     fallos := fallos || 'aceptó un día D de la semana siguiente'::text;
   exception when check_violation then
     null;
   end;
   -- El domingo de la misma semana sí vale.
   insert into public.planes (lunes, dia_d, con_episodio, estrategia_nombre)
-  values ('2026-10-26', '2026-11-01', true, 'Prueba');
+  values ('2099-10-26', '2099-11-01', true, 'Prueba');
   reset role;
   insert into resultados (prueba, ok, detalle)
   values (prueba, cardinality(fallos) = 0, array_to_string(fallos, '; '));
