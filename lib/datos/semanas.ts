@@ -1,21 +1,21 @@
-// Lectura de las semanas, y de una pieza para su panel, desde Supabase (solo en el servidor: usa las
-// cookies de la sesión). Aquí se pasan las filas de la base (snake_case, `lib/supabase/tipos.ts`) a
-// los tipos de la app (`lib/tipos.ts`), para que las pantallas y `lib/semanas.ts` no vean nunca las
-// de la base.
+// Lectura de las semanas, de los planes y de una pieza para su panel, desde Supabase (solo en el
+// servidor: usa las cookies de la sesión). Aquí se pasan las filas de la base (snake_case,
+// `lib/supabase/tipos.ts`) a los tipos de la app (`lib/tipos.ts`) y, para crear un plan, al revés:
+// las pantallas y `lib/semanas.ts` no ven nunca las de la base.
 
 import { crearClienteServidor } from '@/lib/supabase/servidor';
-import type { Tables } from '@/lib/supabase/tipos';
-import type { Canal, Estado, Formato, PiezaDePlan, Plan } from '@/lib/tipos';
+import type { Tables, TablesInsert } from '@/lib/supabase/tipos';
+import type { Canal, Estado, Formato, NuevaPiezaDePlan, PiezaDePlan, Plan } from '@/lib/tipos';
 
-const FORMATOS: readonly Formato[] = ['slide', 'reel'];
+export const FORMATOS: readonly Formato[] = ['slide', 'reel'];
 const ESTADOS: readonly Estado[] = ['pendiente', 'programada'];
-const CANALES: readonly Canal[] = ['ig', 'tiktok', 'shorts'];
+export const CANALES: readonly Canal[] = ['ig', 'tiktok', 'shorts'];
 
 /**
  * La base guarda formato, estado y canales como texto. Un valor que la app no conoce es un fallo
  * (de datos o de esquema) que tiene que verse, no algo que se pinte a medias.
  */
-function comprobar<T extends string>(valor: string, validos: readonly T[], campo: string): T {
+export function comprobar<T extends string>(valor: string, validos: readonly T[], campo: string): T {
   if ((validos as readonly string[]).includes(valor)) return valor as T;
   throw new Error(`Valor desconocido en ${campo}: «${valor}»`);
 }
@@ -53,6 +53,41 @@ export function aPiezaDePlan(fila: Tables<'plan_piezas'>): PiezaDePlan {
   };
 }
 
+/** Un plan nuevo como lo espera la función `crear_plan` de la base (sus columnas, sin `id`). */
+export function aFilaPlan(plan: Omit<Plan, 'id'>): TablesInsert<'planes'> {
+  return {
+    lunes: plan.lunes,
+    dia_d: plan.diaD,
+    con_episodio: plan.conEpisodio,
+    numero: plan.numero,
+    invitado: plan.invitado,
+    tema: plan.tema,
+    estrategia_id: plan.estrategiaId,
+    estrategia_nombre: plan.estrategiaNombre,
+  };
+}
+
+/**
+ * Una pieza nueva de plan como la esperan `crear_plan` y `cambiar_estrategia`: sin `plan_id` (lo
+ * pone la función) ni estado ni marca de revisar (toda pieza nueva empieza pendiente y sin revisar).
+ * La hora va `HH:MM` o `null`, nunca vacía.
+ */
+export function aFilaPiezaDePlan(
+  p: NuevaPiezaDePlan,
+): Omit<TablesInsert<'plan_piezas'>, 'id' | 'plan_id' | 'estado' | 'revisar'> {
+  return {
+    pieza_id: p.piezaId,
+    nombre: p.nombre,
+    nombre_corto: p.nombreCorto,
+    formato: p.formato,
+    canales: [...p.canales],
+    dias_preparacion: p.diasPreparacion,
+    desplazamiento: p.desplazamiento,
+    fecha: p.fecha,
+    hora: p.hora,
+  };
+}
+
 /**
  * Planes cuyo lunes cae entre `desde` y `hasta`, y piezas de cualquier plan cuya fecha cae entre las
  * dos (así llegan también las que cruzan desde la semana anterior). Si Supabase falla, lanza un
@@ -82,6 +117,18 @@ export async function leerSemanas(
     planes: (planes.data ?? []).map(aPlan),
     piezas: (piezas.data ?? []).map(aPiezaDePlan),
   };
+}
+
+/**
+ * Todos los planes, por orden de semana: para proponer el número y el día D del siguiente y saber si
+ * una semana ya tiene plan. Son uno por semana, así que caben enteros. Si Supabase falla, lanza un
+ * error.
+ */
+export async function leerPlanes(): Promise<Plan[]> {
+  const supabase = await crearClienteServidor();
+  const { data, error } = await supabase.from('planes').select('*').order('lunes');
+  if (error) throw new Error('No se han podido leer los planes', { cause: error });
+  return (data ?? []).map(aPlan);
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

@@ -356,6 +356,92 @@
   color: var(--papel-medio);
 }
 
+/* --- Panel de planificar (PanelPlanificar.tsx) ----------------------- */
+/* De arriba abajo: Sí/No, los datos del episodio (o el día de referencia), las estrategias con su
+   mini fila, la vista previa y Crear plan. El botón y su error usan .accionPieza y .errorPieza, los
+   del panel de una pieza. */
+.formularioPlan {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.camposPlan {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.yaTienePlan,
+.sinEstrategias {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--papel-medio);
+}
+
+.vistaPrevia {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--linea);
+}
+
+.tituloVistaPrevia {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--papel-tenue);
+}
+
+.piezasPrevia {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+}
+
+/* Día, hora y nombre en columnas, para que las fechas se lean de un vistazo. */
+.piezaPrevia {
+  display: grid;
+  grid-template-columns: 3.5rem 4rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.diaPrevia {
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--papel-tenue);
+  white-space: nowrap;
+}
+
+.horaPrevia {
+  font-stretch: 75%;
+  font-weight: 600;
+  color: var(--papel-medio);
+  white-space: nowrap;
+}
+
+/* Una hora que no existe en España ese día (la que salta en marzo): en ámbar, con su aviso debajo. */
+.horaPrevia[data-aviso],
+.avisoHora {
+  color: var(--ambar);
+}
+
+.nombrePrevia {
+  overflow-wrap: break-word;
+}
+
+.avisoHora {
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
 /* --- Pantalla estrecha: los días en lista ---------------------------- */
 /* La maqueta pone la lista en el móvil. Aquí empieza antes, por debajo de 1024 px: en siete columnas
    más estrechas, a una palabra como «secundario» (unos 70 px) ya no le cabe el hueco que le deja la

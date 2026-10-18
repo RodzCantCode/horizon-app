@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { leerPiezaDePlan, leerSemanas } from '@/lib/datos/semanas';
+import { leerPiezaDePlan, leerPlanes, leerSemanas } from '@/lib/datos/semanas';
 import type { Tables } from '@/lib/supabase/tipos';
 
 // Cliente de Supabase simulado (vi.mock se eleva por encima de los import): cada consulta apunta las
@@ -164,5 +164,20 @@ describe('leerPiezaDePlan', () => {
   it('si Supabase falla, lanza un error', async () => {
     preparar({ data: [], error: null }, { data: null, error: { message: 'caído' } });
     await expect(leerPiezaDePlan(ID)).rejects.toThrow('No se ha podido leer la pieza');
+  });
+});
+
+describe('leerPlanes', () => {
+  it('lee todos los planes por orden de semana y los pasa a los tipos de la app', async () => {
+    preparar({ data: [filaPlan], error: null }, { data: [], error: null });
+    const planes = await leerPlanes();
+
+    expect(consultas.get('planes')!.llamadas).toContainEqual(['order', 'lunes']);
+    expect(planes).toEqual([expect.objectContaining({ id: 'plan05', lunes: '2026-10-12', diaD: '2026-10-16', numero: '05' })]);
+  });
+
+  it('si Supabase falla, lanza un error', async () => {
+    preparar({ data: null, error: { message: 'caído' } }, { data: [], error: null });
+    await expect(leerPlanes()).rejects.toThrow('No se han podido leer los planes');
   });
 });

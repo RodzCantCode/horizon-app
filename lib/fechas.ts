@@ -37,6 +37,14 @@ function aMilisegundosUtc(fecha: string): number {
   return Date.UTC(anio, mes - 1, dia);
 }
 
+/**
+ * Indica si un texto es una fecha `YYYY-MM-DD` que existe en el calendario. Sirve para lo que llega
+ * de fuera (la URL, una acción de servidor) antes de hacer cuentas con ello: `2026-02-30` no lo es.
+ */
+export function esFecha(texto: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(texto) && sumarDias(texto, 0) === texto;
+}
+
 /** Lunes de la semana que contiene la fecha (el lunes se devuelve a sí mismo). */
 export function lunesDe(fecha: string): string {
   return sumarDias(fecha, -diaSemana(fecha));

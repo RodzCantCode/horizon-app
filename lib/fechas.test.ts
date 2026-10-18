@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   diaSemana,
   diasEntre,
+  esFecha,
   existeEnMadrid,
   fechaEnMadrid,
   hoyEnMadrid,
@@ -154,5 +155,21 @@ describe('diaSemana', () => {
     expect(diaSemana('2026-10-16')).toBe(4);
     expect(diaSemana('2026-10-18')).toBe(6);
     expect(diaSemana('2026-10-19')).toBe(0);
+  });
+});
+
+describe('esFecha', () => {
+  it('acepta una fecha YYYY-MM-DD que existe en el calendario', () => {
+    expect(esFecha('2026-10-19')).toBe(true);
+    expect(esFecha('2028-02-29')).toBe(true);
+  });
+
+  it('rechaza los días que no existen y los textos que no son fechas', () => {
+    expect(esFecha('2026-02-29')).toBe(false);
+    expect(esFecha('2026-10-32')).toBe(false);
+    expect(esFecha('2026-13-01')).toBe(false);
+    expect(esFecha('2026-1-5')).toBe(false);
+    expect(esFecha('2026-10-19T00:00')).toBe(false);
+    expect(esFecha('')).toBe(false);
   });
 });

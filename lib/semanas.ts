@@ -1,7 +1,7 @@
 // Lógica pura de la pantalla Semanas: qué semanas se ven, qué plan y qué piezas tiene cada día, y
-// los textos de sus encabezados y del panel de una pieza. Sin acceso a datos: recibe los planes, las
-// piezas y el registro ya leídos (`lib/datos/`) y el día de hoy en España (`hoyEnMadrid`), así se
-// prueba entera.
+// los textos de sus encabezados, del panel de una pieza y del de planificar. Sin acceso a datos:
+// recibe los planes, las piezas y el registro ya leídos (`lib/datos/`) y el día de hoy en España
+// (`hoyEnMadrid`), así se prueba entera.
 
 import { diaSemana, fechaEnMadrid, lunesDe, sumarDias } from '@/lib/fechas';
 import { compararFechaYHora, necesitaAtencion } from '@/lib/planes';
@@ -154,16 +154,20 @@ export function resumenPlegada(semana: VistaSemana): string {
 const DIAS_LARGOS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 /** «D», «D-1», «D+4». */
-function posicionRespectoAD(desplazamiento: number): string {
+export function posicionRespectoAD(desplazamiento: number): string {
   if (desplazamiento === 0) return 'D';
   return desplazamiento > 0 ? `D+${desplazamiento}` : `D${desplazamiento}`;
 }
 
+/** «Viernes 16 oct». */
+export function fechaLarga(fecha: string): string {
+  const { dia, mes } = diaYMes(fecha);
+  return `${DIAS_LARGOS[diaSemana(fecha)]} ${dia} ${mes}`;
+}
+
 /** Cuándo se publica y dónde cae respecto al episodio: «Viernes 16 oct · 18:00 · D». */
 export function fechaYPosicion(p: PiezaDePlan): string {
-  const { dia, mes } = diaYMes(p.fecha);
-  const fecha = `${DIAS_LARGOS[diaSemana(p.fecha)]} ${dia} ${mes}`;
-  return [fecha, p.hora, posicionRespectoAD(p.desplazamiento)].filter(Boolean).join(' · ');
+  return [fechaLarga(p.fecha), p.hora, posicionRespectoAD(p.desplazamiento)].filter(Boolean).join(' · ');
 }
 
 const TEXTO_AVISO = { 'va-justa': 'va justa', revisar: 'revisar en Metricool' } as const;
@@ -206,4 +210,14 @@ const VERBOS: Record<string, string> = {
 export function fraseDeRegistro(e: EntradaRegistro): string {
   const { dia, mes } = diaYMes(fechaEnMadrid(new Date(e.creadoEn)));
   return `${e.nombre} ${VERBOS[e.accion] ?? 'la cambió'} · ${dia} ${mes}`;
+}
+
+// --- Panel de planificar ---------------------------------------------
+
+/** «Planificar la semana del 19 al 25 oct»; si cambia de mes, «del 26 oct al 1 nov». */
+export function tituloPlanificar(lunes: string): string {
+  const inicio = diaYMes(lunes);
+  const fin = diaYMes(sumarDias(lunes, 6));
+  const desde = inicio.mes === fin.mes ? `${inicio.dia}` : `${inicio.dia} ${inicio.mes}`;
+  return `Planificar la semana del ${desde} al ${fin.dia} ${fin.mes}`;
 }
