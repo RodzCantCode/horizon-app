@@ -32,8 +32,9 @@ acciones de servidor (`'use server'`).
   cada vista; el resto `variant="surface"`. Sin textos tipo tooltip ni antetítulos.
 - Toda pantalla funciona a 375 px de ancho sin desplazamiento lateral; el panel lateral pasa a hoja
   inferior por debajo de 768 px.
-- Migraciones: cada una se aplica con `mcp__supabase-horizon__apply_migration` y se guarda con el
-  mismo nombre en `supabase/migrations/`. Nunca las conexiones generales de Supabase (skill
+- Migraciones: cada una se aplica con `mcp__supabase-horizon__apply_migration` y se guarda en
+  `supabase/migrations/` como `<versión>_<nombre>.sql`, con la versión que devuelve `list_migrations`
+  tras aplicarla. Nunca las conexiones generales de Supabase (skill
   `supabase-connections`).
 - Rama de trabajo `app-v1` (push = despliegue de prueba en Vercel). A `main` solo con el OK de Mario:
   publica la app en producción.
@@ -60,8 +61,8 @@ acciones de servidor (`'use server'`).
 - [ ] Vercel, proyecto `horizon-app`: variables `NEXT_PUBLIC_SUPABASE_URL` y
   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en Production y Preview; Framework Preset = Next.js; Node
   22.x.
-- [ ] Supabase: crear los tres usuarios (Authentication → Users) y desactivar «Allow new users to
-  sign up».
+- [ ] Supabase: desactivar «Allow new users to sign up». Los usuarios llegan por invitación tras la
+  Tarea 5 (ver `docs/acceso.md`).
 - [ ] Con eso hecho, Claude crea la rama `app-v1` desde `main`, hace commit del esqueleto, el diseño
   y este plan, y la sube. Comprobar en la vista previa de Vercel que se puede entrar y salir con un
   usuario real.
@@ -184,7 +185,7 @@ expect(proponerDiaD([], '2026-10-19')).toBe('2026-10-23'); // sin historial: vie
 ### Tarea 3: Esquema de la base de datos, seguridad y registro
 
 **Archivos:**
-- Crear: `supabase/migrations/20261016120000_esquema_inicial.sql`,
+- Crear: `supabase/migrations/20261018090121_esquema_inicial.sql`,
   `supabase/pruebas/seguridad.sql`, `lib/supabase/tipos.ts` (generado)
 
 **Interfaces:**
@@ -227,7 +228,7 @@ expect(proponerDiaD([], '2026-10-19')).toBe('2026-10-23'); // sin historial: vie
 ### Tarea 4: Datos iniciales
 
 **Archivos:**
-- Crear: `supabase/migrations/20261016120100_datos_iniciales.sql`
+- Crear: `supabase/migrations/20261018091225_datos_iniciales.sql`
 
 - [ ] **Paso 1:** consulta de comprobación que falla: `select count(*) from piezas` = 9 y
   `from estrategias` = 4.
@@ -239,30 +240,70 @@ expect(proponerDiaD([], '2026-10-19')).toBe('2026-10-23'); // sin historial: vie
 - [ ] **Paso 3:** aplicar y repetir la consulta → 9 y 4. Comprobar que E1 tiene 5 ítems.
 - [ ] **Paso 4:** commit «Piezas y estrategias del prototipo como datos iniciales».
 
-### Tarea 5: Tema claro, oscuro y sistema, cabecera y Ajustes
+### Tarea 5: Tema, cabecera, Ajustes y acceso por invitación
 
 **Archivos:**
 - Modificar: `app/global.css` (tokens del tema claro y variables de Mochi para cada tema),
-  `app/layout.tsx` (script previo al pintado que pone `data-tema`)
+  `app/layout.tsx` (script previo al pintado que pone `data-tema`), `lib/supabase/sesion.ts` (usa
+  `destinoSegunSesion`)
 - Crear: `app/(app)/layout.tsx` con la cabecera (logo, **Semanas** `/`, **Estrategias**
-  `/estrategias`, icono de cuenta → `/ajustes`); `app/(app)/ajustes/page.tsx` con
-  `SelectorTema` y **Salir**; `lib/tema.ts`
-- Mover: `app/page.tsx` → `app/(app)/page.tsx` (sigue provisional hasta la Tarea 6)
+  `/estrategias`, icono de cuenta → `/ajustes`); `app/(app)/ajustes/page.tsx` con `SelectorTema`,
+  **Cambiar contraseña** y **Salir**; `lib/tema.ts`; `lib/supabase/rutas.ts`;
+  `app/auth/confirmar/route.ts`; `app/crear-contrasena/` (página y formulario);
+  `lib/contrasena.ts`; `docs/acceso.md`
+- Mover: `app/page.tsx`, `app/acciones.ts` e `app/inicio.module.css` → `app/(app)/` (la portada
+  sigue provisional hasta la Tarea 6)
 
 **Interfaces:**
 - Produce: `type Tema = 'claro' | 'oscuro' | 'sistema'`, `leerTema(): Tema`,
   `guardarTema(t: Tema): void` (en `localStorage`, clave `tema`). Sin atributo = sistema, resuelto
   por `@media (prefers-color-scheme)`.
+- Produce: `destinoSegunSesion(ruta: string, conSesion: boolean): string | null` (adónde redirigir,
+  o `null` si se queda). `/auth/confirmar` no exige sesión; `/crear-contrasena` sí.
+- Produce: `validarContrasena(nueva: string, repetida: string): string | null` (mensaje de error o
+  `null`); mínimo 8 caracteres.
+- `app/auth/confirmar/route.ts`: lee `token_hash` y `type` de la URL; solo acepta `invite` y
+  `recovery`; llama a `supabase.auth.verifyOtp({ type, token_hash })`; si va bien, redirige a
+  `/crear-contrasena`; si no, a `/entrar?error=enlace`, donde se muestra «El enlace no es válido o
+  ha caducado. Pide otro a Mario.»
+- `/crear-contrasena` y **Cambiar contraseña** usan `supabase.auth.updateUser({ password })`.
 
-- [ ] **Paso 1:** test de `lib/tema.ts` con `localStorage` simulado: sin valor → `'sistema'`; valor
-  desconocido → `'sistema'`; `guardarTema('claro')` → `leerTema() === 'claro'`.
-- [ ] **Paso 2:** implementar. Tema claro con la lógica de la maqueta (fondo `#f4f6f8`, superficies
+- [ ] **Paso 1: tests que fallan**
+
+```ts
+expect(leerTema()).toBe('sistema');                 // sin valor
+localStorage.setItem('tema', 'rosa'); expect(leerTema()).toBe('sistema');
+guardarTema('claro'); expect(leerTema()).toBe('claro');
+
+expect(destinoSegunSesion('/', false)).toBe('/entrar');
+expect(destinoSegunSesion('/estrategias', false)).toBe('/entrar');
+expect(destinoSegunSesion('/auth/confirmar', false)).toBe(null);
+expect(destinoSegunSesion('/crear-contrasena', false)).toBe('/entrar');
+expect(destinoSegunSesion('/crear-contrasena', true)).toBe(null);
+expect(destinoSegunSesion('/entrar', true)).toBe('/');
+expect(destinoSegunSesion('/entrar', false)).toBe(null);
+
+expect(validarContrasena('corta', 'corta')).toBe('Tiene que tener al menos 8 caracteres.');
+expect(validarContrasena('suficiente1', 'suficiente2')).toBe('Las dos contraseñas no coinciden.');
+expect(validarContrasena('suficiente1', 'suficiente1')).toBe(null);
+```
+
+- [ ] **Paso 2:** `npm test` → fallan.
+- [ ] **Paso 3:** implementar. Tema claro con la lógica de la maqueta (fondo `#f4f6f8`, superficies
   blancas, texto `#0a0e13`, ámbar `#8f5200`) y contraste 4.5:1 en texto pequeño. El script del
-  layout va en línea y antes del cuerpo para que no haya destello del tema equivocado.
-- [ ] **Paso 3:** `npm test`, `npm run build`. En el navegador integrado: cambiar el tema en
-  Ajustes, recargar y comprobar que se mantiene; con «Sistema», emular claro y oscuro. La sección
-  activa de la cabecera se marca. 375 px sin desplazamiento lateral.
-- [ ] **Paso 4:** commit «Temas claro, oscuro y sistema, cabecera y Ajustes».
+  layout va en línea y antes del cuerpo para que no haya destello del tema equivocado. El proxy
+  pasa a usar `destinoSegunSesion`. `docs/acceso.md` (runbook, formato de docdocs): cómo invitar,
+  cómo mandar una recuperación, y lo que Mario configura en Supabase: plantillas «Invite user» y
+  «Reset password» con el enlace
+  `{{ .SiteURL }}/auth/confirmar?token_hash={{ .TokenHash }}&type=invite` (y `type=recovery`), Site
+  URL y direcciones permitidas (localhost, vista previa de Vercel y producción). Textos de los
+  correos en español.
+- [ ] **Paso 4:** `npm test`, `npm run lint`, `npm run build`. En el navegador integrado (sin
+  sesión): `/entrar`, `/entrar?error=enlace` y que `/ajustes` sin sesión manda a `/entrar`. La
+  comprobación con sesión (tema que se mantiene al recargar, «Sistema» con claro y oscuro emulados,
+  sección activa de la cabecera, cambiar contraseña, 375 px) la hace el controlador cuando Mario
+  haya entrado.
+- [ ] **Paso 5:** commit «Temas, cabecera, Ajustes y acceso por invitación».
 
 ### Tarea 6: Pantalla Semanas (lectura)
 
@@ -330,7 +371,7 @@ expect(v[1].dias[4].piezas.map((p) => p.hora)).toEqual(['18:00']);
 ### Tarea 8: Funciones SQL de varias filas
 
 **Archivos:**
-- Crear: `supabase/migrations/20261016120200_funciones_planes.sql`, `supabase/pruebas/funciones.sql`
+- Crear: `supabase/migrations/<versión>_funciones_planes.sql`, `supabase/pruebas/funciones.sql`
 
 **Interfaces:**
 - Produce, todas `security invoker` (respetan RLS) y atómicas:

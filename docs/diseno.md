@@ -78,7 +78,19 @@ Editar estrategias o piezas **nunca cambia los planes ya creados**.
 ### Ajustes
 
 Icono de cuenta arriba a la derecha. Solo lo que es de la app, no de la planificación: tema
-(**claro, oscuro o sistema**) y **Salir**.
+(**claro, oscuro o sistema**), **Cambiar contraseña** y **Salir**.
+
+### Acceso: solo por invitación
+
+No hay registro. Solo entra quien Mario invita desde Supabase (decidido el 17-oct-2026):
+
+1. Mario invita a un correo desde Supabase («Invite user»).
+2. El correo lleva a la app, que comprueba el enlace y abre **Crea tu contraseña**.
+3. Con la contraseña creada, se entra con normalidad desde **Entrar**.
+
+Si alguien olvida su contraseña, Mario le manda desde Supabase un correo de recuperación que lleva
+a la misma pantalla. En **Entrar** no hay enlace de «¿Olvidaste tu contraseña?». Los pasos de
+Supabase (plantillas de correo y direcciones permitidas) están en [acceso.md](acceso.md).
 
 ## Estados y avisos
 
@@ -120,8 +132,8 @@ Icono de cuenta arriba a la derecha. Solo lo que es de la app, no de la planific
 - **El registro lo escribe la base de datos** con disparadores (triggers) que toman el usuario de la
   sesión, no la app: no puede olvidarse ni saltarse.
 - **Seguridad:** RLS en todas las tablas. Solo usuarios con sesión pueden leer y escribir; los tres
-  pueden lo mismo. Sin sesión, ninguna fila. El registro público de Supabase está desactivado y los
-  usuarios se crean a mano.
+  pueden lo mismo. Sin sesión, ninguna fila. El registro público de Supabase está desactivado y solo
+  se entra por invitación (ver [Acceso](#acceso-solo-por-invitación)).
 - **Sin campos de Metricool por ahora:** se añaden cuando se conecte.
 - **Datos iniciales:** las piezas (T0–T4, clips) y estrategias (E1–E4) del prototipo, editables
   después desde Estrategias.
