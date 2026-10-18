@@ -266,7 +266,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cambiar_estrategia: {
+        Args: {
+          estrategia_id: string
+          estrategia_nombre: string
+          piezas: Json
+          plan_id: string
+        }
+        Returns: undefined
+      }
+      crear_plan: { Args: { piezas: Json; plan: Json }; Returns: string }
+      mover_plan: {
+        Args: { nuevo_dia_d: string; plan_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
