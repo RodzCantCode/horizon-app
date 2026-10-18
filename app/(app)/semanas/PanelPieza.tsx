@@ -1,7 +1,7 @@
 'use client';
 
 import { startTransition, useEffect, useId, useRef, useState, useTransition, type FormEvent } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Button, PencilIcon, Select, TextField } from 'mochi-ui';
 import { existeEnMadrid, normalizarHora } from '@/lib/fechas';
 import {
@@ -45,13 +45,16 @@ const SIN_CONEXION = 'No se ha podido conectar. Vuelve a intentarlo.';
  */
 export function PanelPieza({ id, detalle, hoy }: { id: string; detalle: DetalleDePieza | null; hoy: string }) {
   const parametros = useSearchParams();
-  const ruta = usePathname();
   const abierto = parametros.get('pieza') === id;
 
+  // Lee la URL de ese momento, no la del último pintado, como los otros paneles: también se llama al
+  // terminar de quitar la pieza, y para entonces el panel puede estar cerrado o ser otro.
   function cerrar() {
-    const siguientes = new URLSearchParams(parametros.toString());
+    const siguientes = new URLSearchParams(window.location.search);
+    if (siguientes.get('pieza') !== id) return;
     siguientes.delete('pieza');
     const consulta = siguientes.toString();
+    const ruta = window.location.pathname;
     window.history.pushState(null, '', consulta ? `${ruta}?${consulta}` : ruta);
   }
 
