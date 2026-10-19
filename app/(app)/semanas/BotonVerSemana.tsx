@@ -12,7 +12,7 @@ import { LinkButton } from 'mochi-ui';
  */
 export function BotonVerSemana({ lunes }: { lunes: string }) {
   return (
-    <LinkButton as={Link} href={`/?semana=${lunes}`} variant="surface" size="sm" data-semana={lunes}>
+    <LinkButton as={Link} href={`?semana=${lunes}`} variant="surface" size="sm" data-semana={lunes}>
       Ver la semana
     </LinkButton>
   );

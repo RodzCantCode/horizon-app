@@ -1,7 +1,8 @@
 # Diseño de la app
 
 > **Actualizado:** 2026-10-19. Diseño acordado con Mario en sesión antes de construir las pantallas,
-> con lo que se ajustó al construirlas (rama `app-v1`).
+> con lo que se ajustó al construirlas (rama `app-v1`) y tras publicarla (navegación lateral, Inicio
+> y paneles en ventana centrada).
 > Maqueta de la pantalla principal: https://claude.ai/artifact/TScsm8f4QkSyBozqYzoNRv (privada).
 > El prototipo (`prototipo/index.html`) es referencia del modelo, no de la interfaz.
 
@@ -23,10 +24,22 @@ conecta con las redes y publica. La app no publica en redes.
 
 ## Pantallas
 
-### Semanas (la principal)
+### Navegación
 
-Una sola pantalla con las semanas en orden, de lunes a domingo. Sin menús que elegir. Pinta cuatro:
-la pasada, la actual, la siguiente y una lejana (una semana atrás y dos delante).
+En escritorio, una barra lateral fija a la izquierda, como en una app de trabajo: el logo arriba,
+las secciones (**Inicio**, **Semanas**, **Estrategias**) con su icono, y **Ajustes** al pie. La
+sección en la que se está, con fondo suave y el icono en azul. En el móvil (por debajo de 768 px),
+barra de arriba: logo y cuenta en una fila, las secciones debajo, solo texto.
+
+### Inicio
+
+La semana en curso y nada más, como en Semanas (piezas, días y sus paneles). Si no tiene plan,
+**Planificar** en superficie.
+
+### Semanas
+
+Las semanas en orden, de lunes a domingo. Pinta cuatro: la pasada, la actual, la siguiente y una
+lejana (una semana atrás y dos delante).
 
 - **La semana actual, abierta.** Encabezado con fechas y, si hay episodio, número, invitado y tema.
   Debajo, los siete días en fila (por debajo de 1024 px de ancho, en lista). Cada día muestra sus
@@ -43,8 +56,8 @@ la pasada, la actual, la siguiente y una lejana (una semana atrás y dos delante
 
 ### Paneles de detalle
 
-Todo el detalle se abre en el mismo sitio: un panel a la derecha (por debajo de 768 px, una hoja
-desde abajo). Es modal: el fondo se atenúa y, al tocarlo, el panel se cierra. Nada se edita en la
+Todo el detalle se abre en el mismo sitio: una ventana centrada de hasta 720 px de ancho (por
+debajo de 768 px, una hoja desde abajo). Es modal: el fondo se atenúa y, al tocarlo, el panel se cierra. Nada se edita en la
 pantalla principal; fuera del modo edición solo se cambia el estado de una pieza.
 
 - **Pieza** (al pulsarla): nombre, fecha y hora, posición respecto al episodio (D-1…D+5), episodio,
@@ -54,7 +67,7 @@ pantalla principal; fuera del modo edición solo se cambia el estado de una piez
 - **Semana** (al pulsar su encabezado): datos del episodio, estrategia usada y sus piezas.
   Con el lápiz: editar los datos del episodio (el número es obligatorio), añadir una pieza suelta,
   cambiar la estrategia (regenera las piezas y avisa si alguna estaba programada) y mover la semana
-  entera de fecha, solo dentro de las semanas que pinta la portada (más allá, el plan dejaría de
+  entera de fecha, solo dentro de las semanas que pinta Semanas (más allá, el plan dejaría de
   verse).
 - El modo edición termina con **Guardar** o **Cancelar**. Los cambios afectan solo a ese plan, nunca
   a la estrategia ni a la pieza de origen.
@@ -81,7 +94,7 @@ Debajo, vista previa con las piezas, sus fechas y horas reales, y el botón **Cr
 
 ### Estrategias
 
-Segunda sección de la cabecera (junto a **Semanas**). Contiene:
+Sección de la navegación. Contiene:
 
 - **Estrategias**, en «Con episodio» y «Sin episodio», con su mini fila de días. Al editar una, se
   ponen o quitan piezas en cada día de D-1 a D+5; una pieza solo entra en los días que admite y no
@@ -96,7 +109,7 @@ Editar estrategias o piezas **nunca cambia los planes ya creados**.
 
 ### Ajustes
 
-Icono de cuenta arriba a la derecha. Solo lo que es de la app, no de la planificación: **Tu cuenta**
+Al pie de la barra lateral (en el móvil, el icono de cuenta arriba a la derecha). Solo lo que es de la app, no de la planificación: **Tu cuenta**
 (el correo con el que has entrado, que no se cambia, y **Tu nombre**, el que sale en el registro:
 con el lápiz pasa a un campo de hasta 40 caracteres con **Guardar** y **Cancelar**), tema
 (**claro, oscuro o sistema**), **Cambiar contraseña** y **Salir** (cierra la sesión solo en este

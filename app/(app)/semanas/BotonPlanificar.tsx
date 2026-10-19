@@ -16,7 +16,7 @@ export function BotonPlanificar({ lunes, principal }: { lunes: string; principal
   return (
     <LinkButton
       as={Link}
-      href={`/?planificar=${lunes}`}
+      href={`?planificar=${lunes}`}
       variant={principal ? 'accent' : 'surface'}
       size={principal ? 'md' : 'sm'}
       data-planificar={lunes}

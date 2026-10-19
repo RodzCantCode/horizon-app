@@ -11,8 +11,18 @@ import estilos from './semanas.module.css';
 // Con plan, el encabezado (fechas y datos) abre el panel de la semana (?semana=<lunes>,
 // PanelSemana.tsx): el enlace va en las fechas, dentro del titular, y cubre todo el encabezado; al
 // cerrar el panel, el foco vuelve a él por su data-semana.
-export function Semana({ semana, hoy }: { semana: VistaSemana; hoy: string }) {
-  const Titular = semana.posicion === 'actual' ? 'h1' : 'h2';
+//
+// La actual es el titular de la página (h1) salvo donde la página ya tiene el suyo (Semanas).
+export function Semana({
+  semana,
+  hoy,
+  titular,
+}: {
+  semana: VistaSemana;
+  hoy: string;
+  titular?: 'h1' | 'h2';
+}) {
+  const Titular = titular ?? (semana.posicion === 'actual' ? 'h1' : 'h2');
   const idTitular = `semana-${semana.lunes}`;
 
   return (
@@ -21,7 +31,7 @@ export function Semana({ semana, hoy }: { semana: VistaSemana; hoy: string }) {
         <Titular id={idTitular} className={`ancha ${estilos.fechas}`}>
           {semana.plan ? (
             <Link
-              href={`/?semana=${semana.lunes}`}
+              href={`?semana=${semana.lunes}`}
               scroll={false}
               className={estilos.enlaceSemana}
               data-semana={semana.lunes}

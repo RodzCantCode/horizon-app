@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Button, CloseIcon, Dialog, Drawer } from 'mochi-ui';
+import { Button, CloseIcon, Dialog } from 'mochi-ui';
 import estilos from './panel.module.css';
 
-// Donde se abre todo el detalle (docs/diseno.md § Paneles de detalle): a la derecha en escritorio y,
-// por debajo de 768 px, una hoja que sube desde abajo. Son el Drawer y el Dialog de Mochi, que ya
-// traen role="dialog" con aria-modal y el título como nombre, el foco retenido dentro y devuelto al
+// Donde se abre todo el detalle (docs/diseno.md § Paneles de detalle): una ventana centrada en
+// escritorio y, por debajo de 768 px, una hoja que sube desde abajo. Es el Dialog de Mochi, que ya
+// trae role="dialog" con aria-modal y el título como nombre, el foco retenido dentro y devuelto al
 // cerrar, Esc, el fondo que cierra al tocarlo y el desplazamiento de la página bloqueado. Aquí se
-// elige cuál según el ancho y se les pone el botón de cerrar y el titular de Horizon.
+// elige la forma según el ancho y se le pone el botón de cerrar y el titular de Horizon.
 
 // El mismo corte que el móvil de la pantalla Semanas (semanas.module.css).
 const CONSULTA_MOVIL = '(max-width: 47.99rem)';
@@ -29,6 +29,10 @@ function esMovil() {
 function esMovilEnServidor() {
   return false;
 }
+
+// Ancho máximo de la ventana centrada, en px: lo bastante para trabajar con el detalle sin apretarlo.
+// Mochi la estrecha sola si la pantalla no llega.
+const ANCHO_VENTANA = 720;
 
 export function Panel({
   abierto,
@@ -63,41 +67,22 @@ export function Panel({
     </div>
   );
 
-  if (movil) {
-    return (
-      <Dialog
-        open={abierto}
-        onOpenChange={alCambiar}
-        title={titulo}
-        presentation="sheet"
-        className={estilos.hoja}
-      >
-        {/* La hoja de Mochi no trae botón de cerrar (se cierra arrastrándola o tocando fuera). */}
-        <Button
-          variant="surface"
-          iconOnly
-          aria-label="Cerrar"
-          onClick={alCerrar}
-          className={estilos.cerrar}
-        >
-          <CloseIcon size={20} />
-        </Button>
-        {contenido}
-      </Dialog>
-    );
-  }
-
   return (
-    <Drawer
+    <Dialog
       open={abierto}
       onOpenChange={alCambiar}
       title={titulo}
-      width={420}
-      closeLabel="Cerrar"
-      className={estilos.lateral}
+      presentation={movil ? 'sheet' : 'center'}
+      width={ANCHO_VENTANA}
+      className={estilos.panel}
     >
+      {/* El Dialog de Mochi no trae botón de cerrar (se cierra con Esc, tocando fuera o, la hoja,
+          arrastrándola). */}
+      <Button variant="surface" iconOnly aria-label="Cerrar" onClick={alCerrar} className={estilos.cerrar}>
+        <CloseIcon size={20} />
+      </Button>
       {contenido}
-    </Drawer>
+    </Dialog>
   );
 }
 

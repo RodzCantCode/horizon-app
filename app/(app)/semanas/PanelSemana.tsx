@@ -206,7 +206,7 @@ function DatosSemana({
             {piezasDelPlan.map((p) => (
               <li key={p.id}>
                 {/* Abre su panel en lugar de este (la URL lleva solo la pieza). */}
-                <Link href={`/?pieza=${p.id}`} scroll={false} className={estilos.piezaSemana}>
+                <Link href={`?pieza=${p.id}`} scroll={false} className={estilos.piezaSemana}>
                   <MarcaEstado pieza={p} hoy={hoy} />
                   <span className={estilos.diaPrevia}>{etiquetaDia(p.fecha)}</span>
                   <span className={estilos.horaPrevia}>{p.hora}</span>

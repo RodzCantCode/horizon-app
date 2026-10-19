@@ -5,7 +5,7 @@ import { Button } from 'mochi-ui';
 import estilos from './inicio.module.css';
 
 // Si una lectura de Supabase falla (lib/datos/ lanza un error a propósito, para no pintar semanas
-// vacías que parezcan sin planificar), se ve esto en lugar de la página, con la cabecera encima.
+// vacías que parezcan sin planificar), se ve esto en lugar de la página, con la navegación al lado.
 // Reintentar vuelve a pedir los datos al servidor.
 export default function ErrorDeDatos({
   error,

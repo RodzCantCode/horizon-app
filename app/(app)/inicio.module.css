@@ -1,10 +1,15 @@
-/* La cabecera (app/(app)/cabecera.tsx) ya da el aire de arriba. Las semanas van una debajo de otra;
-   cada una se pinta en app/(app)/semanas/. */
+/* Inicio y Semanas. El aire de arriba lo da el layout (layout.module.css). Las semanas van una
+   debajo de otra; cada una se pinta en app/(app)/semanas/. */
 .pagina {
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
   padding: 0 var(--margen) clamp(2rem, 5vw, 3rem);
+}
+
+/* El titular de Semanas, como los de Estrategias y Ajustes. */
+.titular {
+  font-size: clamp(2rem, 7vw, 2.75rem);
 }
 
 /* Mientras llegan las semanas (el <Suspense> de page.tsx): huecos con la forma de la actual. */

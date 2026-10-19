@@ -30,7 +30,7 @@ export function Dia({ dia, hoy }: { dia: VistaDia; hoy: string }) {
             return (
               <li key={pieza.id}>
                 <Link
-                  href={`/?pieza=${pieza.id}`}
+                  href={`?pieza=${pieza.id}`}
                   scroll={false}
                   className={estilos.pieza}
                   data-pieza={pieza.id}

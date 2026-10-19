@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: 'Estrategias · Horizon Sport',
 };
 
-// Estrategias, la segunda sección de la cabecera (docs/diseno.md § Estrategias): las estrategias en
+// Estrategias, una sección de la navegación (docs/diseno.md § Estrategias): las estrategias en
 // «Con episodio» y «Sin episodio», cada una con su mini fila de días, y las piezas, con las
 // archivadas plegadas al final. Pulsar una abre su panel (?estrategia=<id> o ?pieza=<id>), donde se
 // ve, se edita con el lápiz y, una pieza, se archiva o se recupera; **Nueva estrategia** y **Nueva

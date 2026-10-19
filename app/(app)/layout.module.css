@@ -1,0 +1,22 @@
+/* Escritorio: la barra lateral (navegacion.module.css) a la izquierda y el contenido al lado, con
+   aire arriba. En el móvil, la barra va encima y ya da ese aire. */
+.app {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
+.contenido {
+  padding-top: clamp(1.5rem, 3vw, 2.5rem);
+  min-width: 0;
+}
+
+@media (max-width: 47.99rem) {
+  .app {
+    display: block;
+  }
+
+  .contenido {
+    padding-top: 0;
+  }
+}
