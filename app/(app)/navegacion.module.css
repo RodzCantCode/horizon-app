@@ -30,6 +30,8 @@
 .enlace {
   display: flex;
   width: 100%;
+  /* La altura que da el texto (relleno y una línea): plegada, sin texto, se mantiene igual. */
+  min-height: 2.5rem;
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
@@ -118,6 +120,11 @@
     grid-area: logo;
     justify-self: start;
     padding-inline: 0;
+  }
+
+  /* En el móvil no se pliega: la altura, la de siempre. */
+  .enlace {
+    min-height: 0;
   }
 
   .secciones {
