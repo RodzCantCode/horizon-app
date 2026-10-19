@@ -32,7 +32,7 @@ function esMovilEnServidor() {
 
 // Ancho máximo de la ventana centrada, en px: lo bastante para trabajar con el detalle sin apretarlo.
 // Mochi la estrecha sola si la pantalla no llega.
-const ANCHO_VENTANA = 720;
+const ANCHO_VENTANA = 960;
 
 export function Panel({
   abierto,

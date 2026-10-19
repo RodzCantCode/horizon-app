@@ -56,8 +56,8 @@ lejana (una semana atrás y dos delante).
 
 ### Paneles de detalle
 
-Todo el detalle se abre en el mismo sitio: una ventana centrada de hasta 720 px de ancho (por
-debajo de 768 px, una hoja desde abajo). Es modal: el fondo se atenúa y, al tocarlo, el panel se cierra. Nada se edita en la
+Todo el detalle se abre en el mismo sitio: una ventana centrada de hasta 960 px de ancho, con los campos
+de dos en dos (por debajo de 768 px, una hoja desde abajo, con los campos uno debajo de otro). Es modal: el fondo se atenúa y, al tocarlo, el panel se cierra. Nada se edita en la
 pantalla principal; fuera del modo edición solo se cambia el estado de una pieza.
 
 - **Pieza** (al pulsarla): nombre, fecha y hora, posición respecto al episodio (D-1…D+5), episodio,

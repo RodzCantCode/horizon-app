@@ -366,9 +366,12 @@
   gap: 1.75rem;
 }
 
+/* Los campos van de dos en dos cuando el panel es ancho (la ventana de escritorio) y uno debajo de
+   otro en la hoja del móvil: como mucho dos columnas (la mitad del ancho, menos medio hueco) y nunca
+   de menos de 16rem. Igual en .campos. */
 .camposPlan {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(16rem, calc(50% - 0.375rem)), 1fr));
   gap: 0.75rem;
 }
 
@@ -491,8 +494,9 @@
 }
 
 .campos {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(16rem, calc(50% - 0.375rem)), 1fr));
+  align-items: center;
   gap: 0.75rem;
 }
 
