@@ -170,6 +170,11 @@ publicable; las dos son públicas por diseño). `.env.local` no se sube. La clav
 Next.js 16 con Cache Components activado (`next.config.ts`, lo que trae `create-next-app`): lo que
 lee la petición (cookies, sesión) va dentro de `<Suspense>`, como `ListaSemanas` en
 `app/(app)/page.tsx`.
+Con Partial Prefetching (`partialPrefetching` en `next.config.ts`), leer cookies no saca nada del
+prerender del App Shell: por eso `crearClienteServidor()` (`lib/supabase/servidor.ts`) espera antes
+a la petición real con `connection()`, y «hoy» (`hoyEnMadrid()`) se calcula siempre después de
+pedir el cliente o la sesión. Si no, Next.js avisa en desarrollo de un valor inestable (`Date.now()`,
+`new Date()`) en el prerender.
 
 ## Convenciones
 

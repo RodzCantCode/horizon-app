@@ -1,12 +1,21 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { connection } from 'next/server';
 import { clavePublicableSupabase, urlSupabase } from './entorno';
 import { rutaEntrar } from './rutas';
 import type { Database } from './tipos';
 
 // Cliente para componentes de servidor, acciones de servidor y route handlers.
+//
+// Espera a la petición real (`connection()`) antes de nada. Con Cache Components y Partial
+// Prefetching, Next.js prerenderiza el App Shell de cada ruta con las cookies de la sesión: leerlas
+// no lo detiene. Sin esta espera, ese prerender comprobaría la caducidad de la sesión (Supabase usa
+// `Date.now()`) y calcularía «hoy», y el navegador guardaría el resultado para la siguiente
+// navegación. Así, lo que lee la base y lo que viene después (como `hoyEnMadrid()` en las
+// pantallas) solo corre en cada petición.
 export async function crearClienteServidor() {
+  await connection();
   const almacenCookies = await cookies();
 
   return createServerClient<Database>(urlSupabase, clavePublicableSupabase, {

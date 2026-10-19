@@ -51,7 +51,8 @@ function CargandoSemanas() {
 
 // Lee la sesión de las cookies y los datos, así que va dentro de <Suspense>: con Cache Components, lo
 // que depende de la petición no entra en la parte que se prerenderiza. «Hoy» se calcula después de
-// leer las cookies, en cada petición y en hora de España.
+// exigirSesion, que espera a la petición real (lib/supabase/servidor.ts): en cada petición y en hora
+// de España.
 async function ListaSemanas() {
   await exigirSesion();
 

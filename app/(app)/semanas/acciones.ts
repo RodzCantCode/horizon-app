@@ -377,10 +377,12 @@ export async function anadirPiezaSuelta(
  */
 export async function moverSemana(planId: string, nuevoDiaD: string): Promise<{ error?: string }> {
   if (!esFecha(nuevoDiaD)) return { error: FECHA_NO_VALIDA };
+
+  // «Hoy» después de crear el cliente, que espera a la petición real (lib/supabase/servidor.ts).
+  const supabase = await crearClienteServidor();
   const { desde, hasta } = rangoSemanas(hoyEnMadrid());
   if (nuevoDiaD < desde || nuevoDiaD > hasta) return { error: FUERA_DE_LA_PORTADA };
 
-  const supabase = await crearClienteServidor();
   const { error } = await supabase.rpc('mover_plan', { plan_id: planId, nuevo_dia_d: nuevoDiaD });
 
   const desfase = avisoDePlanDesfasado(error);
