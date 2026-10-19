@@ -1,10 +1,10 @@
 // Base de datos simulada en memoria para las pruebas de las acciones de servidor, con lo que estas
 // usan del cliente de Supabase: from(tabla) con select (y una tabla anidada: «*, planes(*)»,
 // «…, plan_piezas(estado)» o «…, estrategia_piezas(…)»), insert (una fila o varias), update,
-// delete, eq, order y maybeSingle; y rpc. Se porta como PostgREST en lo que importa aquí: update y
-// delete tocan solo las filas que cumplen los filtros y devuelven las tocadas. Así la prueba mira
-// cómo queda la base, no solo qué se pidió. Con `antesDeEscribir`, otra persona cambia la base entre
-// la lectura de una acción y su escritura.
+// delete, eq, order y maybeSingle; rpc, y auth.getClaims (la sesión que se prepara en `sesion`).
+// Se porta como PostgREST en lo que importa aquí: update y delete tocan solo las filas que cumplen
+// los filtros y devuelven las tocadas. Así la prueba mira cómo queda la base, no solo qué se pidió.
+// Con `antesDeEscribir`, otra persona cambia la base entre la lectura de una acción y su escritura.
 //
 // Cada archivo de pruebas la conecta en lugar del cliente real (vi.mock se eleva por encima de los
 // import, así que el módulo se carga dentro de la fábrica):
@@ -44,6 +44,8 @@ export const llamadasRpc: [string, Record<string, unknown>][] = [];
  * para probar qué pasa si la fila cambia entre la lectura de la acción y su escritura. Corre una vez.
  */
 export const antesDeEscribir = new Map<string, () => void>();
+/** La sesión de la prueba, como la da `auth.getClaims()`: `null` es sin sesión. */
+export const sesion: { claims: { sub: string; email?: string } | null } = { claims: null };
 /** Lo que responde la próxima llamada a una función de la base. */
 export const rpc: { respuesta: { data: unknown; error: ErrorBase | null } } = {
   respuesta: { data: null, error: null },
@@ -56,6 +58,7 @@ export function vaciarBase() {
   escrituras.length = 0;
   llamadasRpc.length = 0;
   rpc.respuesta = { data: null, error: null };
+  sesion.claims = null;
 }
 
 /** La fila de esa tabla con ese id, tal como ha quedado. */
@@ -154,6 +157,9 @@ function consulta(tabla: string) {
 /** Lo que las acciones reciben de `crearClienteServidor()` en las pruebas. */
 export const clienteSimulado = {
   from: consulta,
+  auth: {
+    getClaims: async () => ({ data: sesion.claims ? { claims: sesion.claims } : null, error: null }),
+  },
   rpc: async (funcion: string, argumentos: Record<string, unknown>) => {
     llamadasRpc.push([funcion, argumentos]);
     return rpc.respuesta;

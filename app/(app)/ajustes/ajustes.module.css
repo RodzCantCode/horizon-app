@@ -42,3 +42,42 @@
   font-size: 0.875rem;
   color: var(--papel-medio);
 }
+
+/* Tu cuenta: el correo y el nombre, cada uno con su etiqueta encima. El nombre lleva a la derecha el
+   lápiz; al editar, el campo ocupa su sitio. */
+.cuenta {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.dato {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.etiqueta {
+  font-size: 0.875rem;
+  color: var(--papel-tenue);
+}
+
+.valor {
+  font-size: 1rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.nombre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.formularioNombre {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}

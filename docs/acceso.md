@@ -118,7 +118,7 @@ la derecha) → **Cambiar contraseña**.
 
 - La persona invitada aparece en Users y, tras crear su contraseña, con fecha de último acceso.
 - Tiene su fila en la tabla `perfiles`, con el nombre sacado de su correo (lo que va antes de la
-  `@`); es el nombre que sale en el registro de cambios. Se puede corregir editando esa fila.
+  `@`); es el nombre que sale en el registro de cambios. Cada uno lo cambia desde Ajustes → **Tu nombre**.
   **Pendiente de la primera invitación real:** comprobar que la fila se crea sola (la crea un
   disparador sobre `auth.users` que todavía no se ha visto funcionar con una invitación).
 - Cierra sesión y vuelve a entrar con el correo y la contraseña nuevos desde **Entrar**.

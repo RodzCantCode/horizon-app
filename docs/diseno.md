@@ -96,7 +96,9 @@ Editar estrategias o piezas **nunca cambia los planes ya creados**.
 
 ### Ajustes
 
-Icono de cuenta arriba a la derecha. Solo lo que es de la app, no de la planificación: tema
+Icono de cuenta arriba a la derecha. Solo lo que es de la app, no de la planificación: **Tu cuenta**
+(el correo con el que has entrado, que no se cambia, y **Tu nombre**, el que sale en el registro:
+con el lápiz pasa a un campo de hasta 40 caracteres con **Guardar** y **Cancelar**), tema
 (**claro, oscuro o sistema**), **Cambiar contraseña** y **Salir** (cierra la sesión solo en este
 dispositivo).
 
