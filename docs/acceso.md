@@ -1,8 +1,8 @@
 # Acceso por invitación
 
-> **Actualizado:** 2026-10-19. Cómo entra alguien nuevo en la app y cómo recupera su contraseña, y lo
-> que hay que configurar en Supabase para que funcione. Por qué solo por invitación:
-> [diseno.md § Acceso](diseno.md#acceso-solo-por-invitación).
+> **Actualizado:** 2026-10-19. Cómo entra alguien nuevo en la app y cómo recupera su contraseña, lo
+> que hay configurado en Supabase para que funcione y dónde vive la publicación y el correo. Por qué
+> solo por invitación: [diseno.md § Acceso](diseno.md#acceso-solo-por-invitación).
 
 En la app no hay registro ni «¿Olvidaste tu contraseña?». Todo sale del panel de Supabase, proyecto
 «Horizon Sport - App» (organización Horizon Sport). Los enlaces de abajo llevan directamente a cada
@@ -10,34 +10,32 @@ pantalla del panel.
 
 ## Cuándo se usa
 
-- **Una vez, antes de la primera invitación:** configurar Supabase (apartado A). Hay que repasarlo si
-  cambia el dominio de la app o cuando haya SMTP propio (plantillas).
+- **Si cambia el dominio de la app, el servicio de correo o las plantillas:** repasar la configuración
+  de Supabase (apartado A) y la operación (último apartado). Hoy está todo hecho.
 - **Cada vez que alguien tenga que entrar:** invitarle (apartado B).
 - **Cuando alguien olvide su contraseña:** mandarle un correo de recuperación (apartado C).
 
 ## Requisitos previos
 
 - Acceso al panel de Supabase con la cuenta de Mario.
-- La app publicada en la dirección que figura como Site URL (apartado A, paso 1): el enlace de los
-  correos lleva siempre allí.
-- **El correo tiene que poder salir.** Sin un servidor de correo propio (SMTP), Supabase solo manda
-  correos a direcciones que sean miembros del equipo de la organización en Supabase, y como mucho 2
-  por hora. Para invitar a alguien que no es del equipo hay que añadirle al equipo de la organización
-  o configurar un SMTP propio (Authentication → Emails → SMTP Settings). Eso último no está hecho
-  (pendiente: Resend).
+- La app publicada en la dirección que figura como Site URL (`https://app.horizonsport.co`): el enlace
+  de los correos lleva siempre allí.
+- **El correo sale por SMTP propio** (Resend, ver [Operación](#operación-publicación-y-correo)), así
+  que se puede invitar a cualquier dirección y no hay límite de 2 correos por hora. Si el SMTP se
+  desactivara, Supabase solo mandaría a miembros del equipo de la organización, con ese límite.
 
-## Cómo funciona el enlace hoy (sin SMTP propio)
+## Cómo funciona el enlace
 
-Sin SMTP propio, Supabase **no deja editar las plantillas de correo** (comprobado en el panel el
-19-oct-2026): la invitación y la recuperación salen con su texto por defecto, en inglés, y con su
-enlace por defecto. Ese enlace va a Supabase, que lo comprueba y vuelve a la Site URL con la sesión
+Con SMTP propio, las plantillas «Invite user» y «Reset password» son las de Horizon Sport, en español
+(apartado A.3), y su enlace va directo a `/auth/confirmar` en la app, que lo comprueba, abre la sesión
+y lleva a **Crea tu contraseña**.
+
+**Respaldo:** si algún correo saliera con el enlace por defecto de Supabase (plantillas restablecidas
+o SMTP desactivado), ese enlace va a Supabase, que lo comprueba y vuelve a la Site URL con la sesión
 (o el error) en el fragmento de la dirección (`#access_token=…&type=invite`, o `#error=…`). La
-portada manda a **Entrar** sin perder el fragmento, y **Entrar** lo recoge
+portada manda a **Entrar** sin perder el fragmento y **Entrar** lo recoge
 (`app/entrar/aceptar-enlace.tsx`): con una invitación o una recuperación válidas abre la sesión y
-lleva a **Crea tu contraseña**; si el enlace no vale, enseña el aviso de abajo.
-
-`/auth/confirmar` y las plantillas del apartado A.3 son para cuando haya SMTP propio: entonces el
-enlace va directo a la app, con el texto de Horizon Sport.
+lleva a **Crea tu contraseña**; si no vale, enseña el aviso de «Si falla».
 
 ## Pasos
 
@@ -45,33 +43,22 @@ enlace va directo a la app, con el texto de Horizon Sport.
 
 1. **Site URL y direcciones permitidas.** En
    [URL Configuration](https://supabase.com/dashboard/project/xxtwmhzdkrmyhjmzoxck/auth/url-configuration):
-   - **Site URL:** `https://app.horizonsport.co`, sin `/` al final (la plantilla ya la pone). Mientras
-     la app no esté publicada ahí (Tarea 12 del plan), pon la dirección donde se vaya a abrir el
-     enlace: la de la rama en Vercel, `https://horizon-app-git-app-v1-rodz-dev.vercel.app` (si las
-     vistas previas están protegidas, solo la abre quien tenga acceso en Vercel), o
-     `http://localhost:3000` para probar en local. Vuelve a `https://app.horizonsport.co` al publicar.
-   - **Redirect URLs:** no hacen falta. Ni el enlace por defecto ni el de las plantillas las usan:
-     los dos van a la Site URL. Solo servirían si un día la app pide un enlace con otra dirección;
-     entonces se añadirían estas (si ya están puestas, no estorban):
-
-     ```text
-     http://localhost:3000/**
-     https://horizon-app-*-rodz-dev.vercel.app/**
-     https://app.horizonsport.co/**
-     ```
-
-     La segunda cubre todas las vistas previas del proyecto `horizon-app` del equipo `rodz-dev` en
-     Vercel.
+   - **Site URL:** `https://app.horizonsport.co`, sin `/` al final (la plantilla ya la pone).
+   - **Redirect URLs:** `https://app.horizonsport.co/**` y `http://localhost:3000/**` (la segunda,
+     para probar en local). Los enlaces de los correos van a la Site URL; estas direcciones solo
+     entran en juego si la app pide un enlace con otra.
+   - Para probar el enlace en una vista previa de Vercel, cambia la Site URL a la de esa vista previa
+     y vuelve a `https://app.horizonsport.co` al terminar.
 2. **Registro público desactivado.** En
    [Sign In / Providers](https://supabase.com/dashboard/project/xxtwmhzdkrmyhjmzoxck/auth/providers),
-   **Allow new users to sign up** tiene que estar apagado. Así solo existe quien Mario invita.
-3. **Plantillas, solo con SMTP propio (pendiente).** Sin SMTP, el panel no deja cambiarlas y no hace
-   falta: la app recoge el enlace por defecto (ver arriba). Con SMTP propio, se ponen estas dos y el
-   enlace pasa a ir directo a `/auth/confirmar`.
+   **Allow new users to sign up** y los accesos anónimos están apagados (comprobado el 2026-10-19;
+   hasta ese día el registro estaba encendido). Así solo existe quien Mario invita.
+3. **SMTP y plantillas.** En Authentication → Emails → SMTP Settings está el SMTP propio (datos en
+   [Operación](#operación-publicación-y-correo)). Las dos plantillas siguientes están puestas en
+   [Email Templates](https://supabase.com/dashboard/project/xxtwmhzdkrmyhjmzoxck/auth/templates); si
+   se pierden, se vuelven a pegar.
 
-   **Plantilla «Invite user».** En
-   [Email Templates](https://supabase.com/dashboard/project/xxtwmhzdkrmyhjmzoxck/auth/templates),
-   pestaña **Invite user**:
+   **Plantilla «Invite user»**, pestaña **Invite user**:
    - Asunto: `Tu acceso a la app de Horizon Sport`
    - Cuerpo (pestaña de código, sustituye todo lo que haya):
 
@@ -97,8 +84,7 @@ enlace va directo a la app, con el texto de Horizon Sport.
 
 1. En [Users](https://supabase.com/dashboard/project/xxtwmhzdkrmyhjmzoxck/auth/users), **Add user** →
    **Send invitation**, escribe su correo y envía.
-2. Le llega el correo de invitación de Supabase (hoy, el de por defecto, en inglés; con SMTP propio,
-   «Tu acceso a la app de Horizon Sport»). Al pulsar el enlace, se comprueba, se abre su sesión y la
+2. Le llega el correo «Tu acceso a la app de Horizon Sport». Al pulsar el enlace, se comprueba, se abre su sesión y la
    app le lleva a **Crea tu contraseña**.
 3. Con la contraseña guardada entra en la portada. A partir de ahí entra con su correo y esa
    contraseña desde **Entrar**.
@@ -107,8 +93,7 @@ enlace va directo a la app, con el texto de Horizon Sport.
 
 1. En [Users](https://supabase.com/dashboard/project/xxtwmhzdkrmyhjmzoxck/auth/users), abre el menú de
    esa persona y elige **Send password recovery**.
-2. Le llega el correo de recuperación de Supabase (hoy, el de por defecto, en inglés; con SMTP propio,
-   «Tu contraseña de Horizon Sport»). El enlace lleva a la misma pantalla, **Crea tu contraseña**;
+2. Le llega el correo «Tu contraseña de Horizon Sport». El enlace lleva a la misma pantalla, **Crea tu contraseña**;
    con la nueva guardada, entra en la portada.
 
 Quien ya ha entrado puede cambiar su contraseña sin correo, desde Ajustes (icono de cuenta, arriba a
@@ -118,23 +103,23 @@ la derecha) → **Cambiar contraseña**.
 
 - La persona invitada aparece en Users y, tras crear su contraseña, con fecha de último acceso.
 - Tiene su fila en la tabla `perfiles`, con el nombre sacado de su correo (lo que va antes de la
-  `@`); es el nombre que sale en el registro de cambios. Cada uno lo cambia desde Ajustes → **Tu nombre**.
-  **Pendiente de la primera invitación real:** comprobar que la fila se crea sola (la crea un
-  disparador sobre `auth.users` que todavía no se ha visto funcionar con una invitación).
+  `@`); es el nombre que sale en el registro de cambios. La crea sola un disparador sobre
+  `auth.users` (comprobado el 2026-10-19 con la cuenta de Mario). Cada uno cambia su nombre desde
+  Ajustes → **Tu cuenta**.
 - Cierra sesión y vuelve a entrar con el correo y la contraseña nuevos desde **Entrar**.
 
 ## Si falla
 
-- **No llega el correo.** Mira la carpeta de spam y el requisito del correo de arriba (miembro del
-  equipo, o SMTP propio; 2 correos por hora como mucho). En
+- **No llega el correo.** Mira la carpeta de spam. En
   [Logs → Auth](https://supabase.com/dashboard/project/xxtwmhzdkrmyhjmzoxck/logs/auth-logs) se ve si
-  Supabase lo rechazó.
+  Supabase lo rechazó, y en el panel de Resend (Emails) si salió. Si Resend rechaza el envío, revisa
+  que el dominio siga verificado y que la clave de API de Supabase → SMTP siga vigente.
 - **El enlace lleva a una dirección que no es la de la app** (otra web, `localhost` cuando se quería
-  la vista previa…): es la Site URL del paso A.1. Corrígela y manda otro correo; los enlaces ya
+  la vista previa…): es la Site URL del apartado A.1. Corrígela y manda otro correo; los enlaces ya
   enviados llevan la dirección de antes.
 - **Al pulsar el enlace sale «El enlace no es válido o ha caducado. Pide otro a Mario.»:** el enlace
-  ya se usó o caducó (con SMTP propio, también si la plantilla no tiene el enlace del apartado A.3:
-  revisa `type=invite` o `type=recovery`). Manda otro desde el apartado B o C. Si pasa siempre al
+  ya se usó o caducó (también si la plantilla no tiene el enlace del apartado A.3: revisa
+  `type=invite` o `type=recovery`). Manda otro desde el apartado B o C. Si pasa siempre al
   primer clic, puede que el correo de esa persona abra los enlaces antes que ella para analizarlos
   (pasa con algunos correos de empresa) y lo gaste: prueba con otra dirección.
 - **El enlace lleva a Entrar sin aviso, en vez de a Crea tu contraseña:** la sesión no llegó a
@@ -147,3 +132,20 @@ la derecha) → **Cambiar contraseña**.
 - **Deshacer una invitación que aún no se ha usado:** en Users, borra ese usuario (menú de la fila →
   **Delete user**); su enlace deja de servir. No lo hagas con alguien que ya ha trabajado en la app:
   se borra también su fila de `perfiles` y el registro se queda sin su nombre.
+
+## Operación: publicación y correo
+
+Sin secretos en el repo: la clave de API de Resend solo está en Supabase → SMTP (la pegó Mario).
+
+- **Vercel** (proyecto `horizon-app`, equipo `rodz-dev`): Framework Preset **Next.js**. Si estuviera
+  en «Other», todos los despliegues fallarían con «No Output Directory named public» y producción
+  seguiría sirviendo lo anterior (pasó hasta el 2026-10-19). Variables `NEXT_PUBLIC_SUPABASE_URL` y
+  `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, de tipo **Config**, en Production y Preview: son públicas por
+  diseño; nunca una clave secreta con prefijo `NEXT_PUBLIC_`.
+- **Cloudflare** (DNS de `horizonsport.co`): `app` es un CNAME a Vercel en «DNS only». El correo de
+  Google Workspace del dominio no se toca.
+- **Resend** (correo de la app): dominio `horizonsport.co` verificado. Sus registros los creó la
+  integración Resend–Cloudflare y están en «DNS only»: CNAME `send`, CNAME `rsend` y TXT
+  `resend._domainkey`. DMARC es recomendable y opcional; no está puesto.
+- **Supabase → SMTP:** host `smtp.resend.com`, puerto 465, usuario `resend`, contraseña = clave de
+  API de Resend con permiso de envío. Remitente `noreply@horizonsport.co`.

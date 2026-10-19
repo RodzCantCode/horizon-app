@@ -60,7 +60,8 @@ acciones de servidor (`'use server'`).
 
 - [x] Vercel, proyecto `horizon-app`: variables `NEXT_PUBLIC_SUPABASE_URL` y
   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en Production y Preview; Framework Preset = Next.js; Node
-  22.x.
+  22.x. (Hecho de verdad el 2026-10-19: hasta entonces el preset era «Other» y no había variables.
+  Ver [acceso.md § Operación](acceso.md#operación-publicación-y-correo).)
 - [x] Supabase: desactivar «Allow new users to sign up». Los usuarios llegan por invitación tras la
   Tarea 5 (ver `docs/acceso.md`).
 - [x] Con eso hecho, Claude crea la rama `app-v1` desde `main`, hace commit del esqueleto, el diseño
@@ -472,12 +473,19 @@ expect(v[1].dias[4].piezas.map((p) => p.hora)).toEqual(['18:00']);
 
 - [ ] **Paso 1:** recorrido en el navegador integrado, escritorio y 375 px, temas claro y oscuro:
   entrar → planificar la semana siguiente → marcar una pieza → editar con el lápiz → cambiar el tema
-  en Ajustes → salir. Sin errores en la consola.
+  en Ajustes → salir. Sin errores en la consola. *Hecho el 2026-10-19 en local y con sesión (la
+  cuenta de Mario): planificar, marcar, lápiz, Estrategias y temas. Falta revisar la app en el móvil
+  y «Cambiar contraseña» con sesión.*
 - [ ] **Paso 2:** revisión de todo el diff de `app-v1` por un revisor con contexto limpio
   (superpowers:requesting-code-review), con foco en la lista «Foco de revisión».
 - [ ] **Paso 3:** actualizar `CLAUDE.md` (Mapa, Comandos con `npm test`, Estado con fecha) y
-  `README.md`; marcar en [diseno.md](diseno.md) lo que haya cambiado al construir.
-- [ ] **Paso 4:** subir `app-v1`, comprobar la vista previa de Vercel con un usuario real, y pedir a
-  Mario el OK para juntarla con `main` (producción).
+  `README.md`; marcar en [diseno.md](diseno.md) lo que haya cambiado al construir. *Al día el
+  2026-10-19 con la publicación y el correo propio; se repite si cambia algo más.*
+- [x] **Paso 4:** subir `app-v1`, comprobar con un usuario real y juntarla con `main` (producción).
+  Hecho el 2026-10-19: `main` = `e9c61b0`, `app.horizonsport.co` sirve la app. Recuperación con la
+  plantilla propia → **Crea tu contraseña** → dentro, y la fila de `perfiles` se creó sola.
 - [ ] **Paso 5:** antes de usarla con datos reales, montar una copia periódica de los datos fuera de
   Supabase (el plan gratuito no da copias que Mario pueda restaurar). Se diseña con Mario.
+- [ ] **Paso 6:** invitar a Izan y Lluís ([acceso.md § B](acceso.md#b-invitar-a-alguien)), que pongan
+  su nombre en Ajustes, y decidir si se quita el plan de prueba de la semana del 26-oct (sin
+  episodio). DMARC del dominio de correo, opcional.

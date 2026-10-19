@@ -107,14 +107,14 @@ dispositivo).
 No hay registro. Solo entra quien Mario invita desde Supabase (decidido el 17-oct-2026):
 
 1. Mario invita a un correo desde Supabase («Invite user»).
-2. El enlace del correo se comprueba, abre la sesión y lleva a **Crea tu contraseña**. Hoy, sin SMTP
-   propio, es el enlace por defecto de Supabase y lo recoge **Entrar**.
+2. El enlace del correo se comprueba, abre la sesión y lleva a **Crea tu contraseña**. El correo sale
+   con plantilla propia (SMTP propio); si saliera con el enlace por defecto de Supabase, lo recoge
+   **Entrar**.
 3. Con la contraseña creada, se entra con normalidad desde **Entrar**.
 
 Si alguien olvida su contraseña, Mario le manda desde Supabase un correo de recuperación que lleva
 a la misma pantalla. En **Entrar** no hay enlace de «¿Olvidaste tu contraseña?». Los pasos de
-Supabase (Site URL, registro desactivado y, cuando haya SMTP propio, las plantillas de correo) están
-en [acceso.md](acceso.md).
+Supabase (Site URL, registro desactivado, SMTP y plantillas de correo) están en [acceso.md](acceso.md).
 
 ## Estados y avisos
 

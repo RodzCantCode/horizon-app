@@ -1,7 +1,7 @@
 # Horizon App — instrucciones para Claude
 
 Herramienta interna de Horizon Sport para planificar el contenido de redes alrededor de cada
-episodio. Dominio previsto: `app.horizonsport.co`. Solo español.
+episodio. Publicada en `app.horizonsport.co`. Solo español.
 
 Repo **público** (https://github.com/RodzCantCode/horizon-app), a propósito: el plan gratuito de
 Vercel pone trabas con repos privados (decidido el 14-oct-2026). Por eso aquí no entran claves,
@@ -87,20 +87,22 @@ contenido, no con una app con login y datos que cambian.
 
 ## Estado
 
-18-oct-2026: la app está construida en la rama `app-v1` (Tareas 0–11 de
-[docs/plan-construccion.md](docs/plan-construccion.md)). Cada push a `app-v1` publica una vista
-previa en Vercel; `main` sigue sirviendo el prototipo y se junta solo con el OK de Mario (publica en
-producción). Falta:
+19-oct-2026: la app está publicada en `app.horizonsport.co` (`main` = `app-v1`, Tareas 0–11 de
+[docs/plan-construccion.md](docs/plan-construccion.md) y la publicación de la Tarea 12). Cada push a
+`main` publica en producción; cada push a otra rama, una vista previa. El acceso es por invitación,
+con SMTP propio (Resend) y plantillas propias; la configuración de Vercel, Cloudflare, Resend y
+Supabase está en [docs/acceso.md](docs/acceso.md). Falta:
 
-1. La prueba con sesión: el recorrido completo con un usuario real (Tarea 12).
-2. Que el correo de invitación llegue a Izan y Lluís ([docs/acceso.md § Requisitos
-   previos](docs/acceso.md#requisitos-previos)).
+1. Invitar a Izan y Lluís ([docs/acceso.md § Pasos](docs/acceso.md#b-invitar-a-alguien)) y que
+   pongan su nombre en Ajustes.
+2. El resto de la Tarea 12: revisar la app en el móvil y «Cambiar contraseña» con sesión, la revisión
+   del diff y decidir si se quita el plan de prueba de la semana del 26-oct.
 3. Antes de usarla con datos reales, una copia periódica de los datos fuera de Supabase (el plan
    gratuito no da copias que Mario pueda restaurar).
 
 Supabase: proyecto «Horizon Sport - App» (organización «Horizon Sport», plan gratuito, Europa);
 Supabase pausa los proyectos gratuitos tras una semana sin uso y se reactivan desde el panel sin
-perder datos. Vercel: proyecto `horizon-app` (equipo `Rodz`, plan Hobby), enlazado al repo.
+perder datos. Vercel: proyecto `horizon-app` (equipo `rodz-dev`, plan Hobby), enlazado al repo.
 
 ## Diseño
 
@@ -153,8 +155,8 @@ publicable; las dos son públicas por diseño). `.env.local` no se sube. La clav
 | `app/global.css` | Tokens de Horizon (tema oscuro y claro) y variables de Mochi |
 | `app/(app)/` | Lo que va con cabecera (Semanas `/`, Estrategias, Ajustes). Semanas es `page.tsx` con sus componentes en `semanas/`: pulsar una pieza abre su panel (`?pieza=<id>` en la URL: estado y registro, sobrevive a una recarga); **Planificar** abre el de planificar esa semana (`?planificar=<lunes>`: datos del episodio, estrategia con su mini fila, vista previa y **Crear plan**); el encabezado de una semana con plan abre el suyo (`?semana=<lunes>`: episodio, estrategia y piezas). En los paneles de pieza y de semana, el lápiz pasa a modo edición (estado del panel, no va en la URL). Acciones de servidor en `semanas/acciones.ts`. Estrategias es `estrategias/page.tsx`: estrategias con su mini fila y piezas (archivadas plegadas al final); cada una abre su panel (`?estrategia=<id>`, `?pieza=<id>`; con `=nueva`, el de crear una), con lápiz y, en las piezas, **Archivar**/**Recuperar**. Acciones en `estrategias/acciones.ts`. Ajustes es `ajustes/page.tsx`: **Tu cuenta** (correo de la sesión y nombre editable con el lápiz, `editar-nombre.tsx`; acción `cambiarNombre` en `ajustes/acciones.ts`, lectura en `lib/datos/perfil.ts`), tema, contraseña y salir. Si una lectura falla, `error.tsx` |
 | `app/(app)/componentes/` | `Panel.tsx`: el panel de detalle de todas las pantallas (Drawer de Mochi a la derecha; por debajo de 768 px, su Dialog en hoja) y `usePanelDeLaUrl` (abrirlo y cerrarlo con un parámetro de la URL; lo usan los de Estrategias, los de Semanas llevan su propia copia); `edicion.tsx`: el envío de las acciones del modo edición (`useEnvio`) y **Guardar**/**Cancelar** |
-| `app/entrar/` | `/entrar`: correo y contraseña. Sin registro: solo por invitación. `aceptar-enlace.tsx` recoge el enlace por defecto de los correos de Supabase (llega aquí con la sesión en el fragmento) y lleva a **Crea tu contraseña** |
-| `app/auth/confirmar/`, `app/crear-contrasena/` | Adonde llevará el enlace de los correos con plantillas propias (hace falta SMTP propio, pendiente), y **Crea tu contraseña**. Lo que se configura en Supabase: [docs/acceso.md](docs/acceso.md) |
+| `app/entrar/` | `/entrar`: correo y contraseña. Sin registro: solo por invitación. `aceptar-enlace.tsx` recoge el enlace por defecto de Supabase (respaldo: llega aquí con la sesión en el fragmento) y lleva a **Crea tu contraseña** |
+| `app/auth/confirmar/`, `app/crear-contrasena/` | Adonde lleva el enlace de los correos (plantillas propias de Supabase), y **Crea tu contraseña**. Configuración de Supabase, Vercel y correo: [docs/acceso.md](docs/acceso.md) |
 | `proxy.ts` | Corre antes de cada ruta (en Next.js 16 el `middleware` se llama `proxy`): refresca la sesión y decide adónde va cada uno (`lib/supabase/rutas.ts`) |
 | `lib/supabase/` | Clientes de Supabase con `@supabase/ssr`: `navegador.ts`, `servidor.ts` y `sesion.ts` (el del proxy); `rutas.ts`, qué rutas piden sesión; `enlace.ts`, qué trae el fragmento del enlace por defecto |
 | `lib/*.ts` | Lógica sin pantalla ni base de datos, con sus pruebas al lado (`*.test.ts`): `fechas.ts` (días y horas en `Europe/Madrid`), `planes.ts` (generar un plan, va justa, mover, propuestas), `semanas.ts` (qué semanas se ven y los textos de Semanas), `estrategias.ts` (los de Estrategias), `tema.ts`, `contrasena.ts`; los tipos, en `tipos.ts` |
@@ -163,7 +165,7 @@ publicable; las dos son públicas por diseño). `.env.local` no se sube. La clav
 | `supabase/migrations/` | Las migraciones aplicadas, con la versión que registró `apply_migration` |
 | `supabase/pruebas/` | Pruebas de la base en SQL: `seguridad.sql` (RLS y registro) y `funciones.sql` (`crear_plan`, `mover_plan`, `cambiar_estrategia`) |
 | `docs/plan-construccion.md` | El plan por tareas con que se construyó, y lo que queda (Tarea 12) |
-| `docs/acceso.md` | Cómo invitar, cómo mandar una recuperación y qué configurar en Supabase |
+| `docs/acceso.md` | Cómo invitar, cómo mandar una recuperación, qué hay configurado en Supabase y la operación de Vercel, Cloudflare y Resend |
 | `prototipo/index.html` | Prototipo de octubre: referencia del modelo, no de la interfaz. No se sirve |
 | `AGENTS.md` | Lo escribe `next dev`: avisa a los agentes de que lean la documentación de Next que viene en `node_modules/next/dist/docs/`. No se edita a mano |
 

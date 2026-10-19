@@ -1,7 +1,7 @@
 # Horizon App
 
 Herramienta interna de Horizon Sport para planificar el contenido de redes de cada episodio.
-Repo público. Previsto en `app.horizonsport.co`.
+Repo público. Publicada en `app.horizonsport.co`.
 
 App de Next.js con login de Supabase. Para arrancarla en local (Node 22): `npm install`, copia
 `.env.example` como `.env.local` y rellénalo, y `npm run dev`. De momento tiene la pantalla de
