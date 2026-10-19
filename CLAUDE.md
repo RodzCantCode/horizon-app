@@ -87,9 +87,10 @@ contenido, no con una app con login y datos que cambian.
 
 ## Estado
 
-19-oct-2026: la app está publicada en `app.horizonsport.co` (`main` = `app-v1`, Tareas 0–11 de
-[docs/plan-construccion.md](docs/plan-construccion.md) y la publicación de la Tarea 12). Cada push a
-`main` publica en producción; cada push a otra rama, una vista previa. El acceso es por invitación,
+19-oct-2026: la app está publicada en `app.horizonsport.co` (Tareas 0–11 de
+[docs/plan-construccion.md](docs/plan-construccion.md) y la publicación de la Tarea 12). **Ramas:
+solo `main` (producción: cada push publica) y `preview` (trabajo en curso: cada push da una vista
+previa).** La rama de construcción `app-v1` se juntó con `main` y se borró el 19-oct-2026. El acceso es por invitación,
 con SMTP propio (Resend) y plantillas propias; la configuración de Vercel, Cloudflare, Resend y
 Supabase está en [docs/acceso.md](docs/acceso.md). Falta:
 
