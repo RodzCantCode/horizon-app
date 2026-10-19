@@ -1,6 +1,7 @@
 /* La navegación (navegacion.tsx). En escritorio, barra lateral fija a la izquierda, como en una app
    de trabajo: el logo arriba, las secciones debajo y Ajustes al pie. En el móvil, barra de arriba
-   (al final del archivo). El corte es el mismo que el de los paneles (768 px). */
+   (al final del archivo). El corte es el mismo que el de los paneles (768 px).
+   Plegada (html[data-barra='plegada'], lib/barra.ts), solo los iconos: ver «Barra plegada». */
 
 .barra {
   position: sticky;
@@ -12,6 +13,8 @@
   padding: 1.75rem 0.875rem 1.25rem;
   background: var(--tinta-850);
   border-right: 1px solid var(--linea);
+  /* Al plegarse, lo que no cabe se recorta mientras se estrecha. */
+  overflow: hidden;
 }
 
 .logo {
@@ -26,6 +29,7 @@
 
 .enlace {
   display: flex;
+  width: 100%;
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
@@ -60,9 +64,37 @@
   color: var(--azul-texto);
 }
 
-/* Ajustes, al pie de la barra. */
-.cuenta {
+/* Plegar y Ajustes, al pie de la barra. */
+.pie {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
   margin-top: auto;
+}
+
+/* El botón de plegar, con la forma de los enlaces. */
+.plegar {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* --- Barra plegada ---------------------------------------------------- */
+/* Los iconos no se mueven al plegar: mismo relleno, solo se estrecha la barra (layout.module.css) y
+   se ocultan los nombres y el resto del logo («H.»). Los nombres siguen ahí para el lector de
+   pantalla. */
+:global(html[data-barra='plegada']) .texto,
+:global(html[data-barra='plegada']) .restoLogo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
 /* Móvil: logo y cuenta en una fila, las secciones debajo. A 375 px las tres cosas no caben juntas. */
@@ -121,19 +153,35 @@
     background: var(--azul-texto);
   }
 
-  /* Ajustes, solo el icono. */
-  .cuenta {
+  /* En el móvil no hay barra que plegar: el pie es solo Ajustes, con el icono. */
+  .pie {
     grid-area: cuenta;
     margin-top: 0;
+  }
+
+  .plegar {
+    display: none;
+  }
+
+  .cuenta {
     padding: 0.5rem;
   }
 
-  .cuenta span {
+  .cuenta .texto {
     position: absolute;
     width: 1px;
     height: 1px;
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
+  }
+
+  /* Plegada en escritorio no cambia nada aquí: el logo, entero. */
+  :global(html[data-barra='plegada']) .restoLogo {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
   }
 }

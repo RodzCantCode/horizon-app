@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useSyncExternalStore, type ReactNode } from 'react';
+import { Tooltip } from 'mochi-ui';
+import { aplicarBarra, guardarBarraPlegada, leerBarraPlegada } from '@/lib/barra';
 import estilos from './navegacion.module.css';
 
 // Iconos de trazo, del mismo dibujo que el de la cuenta: 24 × 24, trazo de 1,6.
@@ -64,38 +66,92 @@ function esActiva(ruta: string, href: string) {
   return href === '/' ? ruta === '/' : ruta === href || ruta.startsWith(`${href}/`);
 }
 
+// Si la barra está plegada, leído del atributo de <html> y avisando cuando cambia.
+function suscribirABarra(avisar: () => void) {
+  const observador = new MutationObserver(avisar);
+  observador.observe(document.documentElement, { attributes: true, attributeFilter: ['data-barra'] });
+  return () => observador.disconnect();
+}
+
+function barraPlegada() {
+  return document.documentElement.getAttribute('data-barra') === 'plegada';
+}
+
+// El servidor pinta la barra desplegada.
+function barraPlegadaEnServidor() {
+  return false;
+}
+
 // La navegación de la app: barra lateral fija en escritorio y, en el móvil, barra de arriba con el
-// logo y la cuenta y las secciones debajo. Cliente solo para saber en qué sección se está
-// (usePathname). Todas las rutas de la app son estáticas, así que con Cache Components se resuelve al
-// prerenderizar y no pide <Suspense>.
+// logo y la cuenta y las secciones debajo. Cliente para saber en qué sección se está (usePathname) y
+// para plegar la barra. Todas las rutas de la app son estáticas, así que con Cache Components se
+// resuelve al prerenderizar y no pide <Suspense>.
+//
+// Plegada, la barra se queda en los iconos y cada uno enseña su nombre al pasar el ratón (el
+// Tooltip de Mochi; desplegada no hace falta y va desactivado). Lo que se ve lo decide el CSS con el
+// data-barra de <html>, que pone el guion de app/layout.tsx antes de pintar (lib/barra.ts); aquí se
+// lee de ese mismo atributo para el botón y los nombres al pasar el ratón.
 export function Navegacion() {
   const ruta = usePathname();
+  const plegada = useSyncExternalStore(suscribirABarra, barraPlegada, barraPlegadaEnServidor);
+
+  // Repone el atributo, que en desarrollo React le quita a <html> al volver a montarlo (como
+  // RestaurarTema con el del tema).
+  useLayoutEffect(() => {
+    aplicarBarra(leerBarraPlegada());
+  }, []);
+
+  function alternar() {
+    aplicarBarra(!plegada);
+    guardarBarraPlegada(!plegada);
+  }
 
   const enlace = ({ href, texto, icono }: (typeof secciones)[number], clase: string) => (
-    <Link
-      key={href}
-      href={href}
-      className={`${estilos.enlace} ${clase}`}
-      aria-current={esActiva(ruta, href) ? 'page' : undefined}
-    >
-      <Icono>{icono}</Icono>
-      <span>{texto}</span>
-    </Link>
+    <Tooltip key={href} content={texto} side="right" disabled={!plegada}>
+      <Link
+        href={href}
+        className={`${estilos.enlace} ${clase}`}
+        aria-current={esActiva(ruta, href) ? 'page' : undefined}
+      >
+        <Icono>{icono}</Icono>
+        <span className={estilos.texto}>{texto}</span>
+      </Link>
+    </Tooltip>
   );
+
+  const textoBoton = plegada ? 'Desplegar barra' : 'Plegar barra';
 
   return (
     <header className={estilos.barra}>
       <Link href="/" className={`logo ${estilos.logo}`} aria-label="Horizon Sport">
-        <span>Horizon</span>
+        <span>H</span>
+        <span className={estilos.restoLogo}>orizon</span>
         <span className="logo__punto">.</span>
-        <span>Sport</span>
+        <span className={estilos.restoLogo}>Sport</span>
       </Link>
 
-      <nav className={estilos.secciones} aria-label="Secciones">
+      <nav id="secciones" className={estilos.secciones} aria-label="Secciones">
         {secciones.map((s) => enlace(s, estilos.seccion))}
       </nav>
 
-      {enlace(ajustes, estilos.cuenta)}
+      <div className={estilos.pie}>
+        <Tooltip content={textoBoton} side="right" disabled={!plegada}>
+          <button
+            type="button"
+            className={`${estilos.enlace} ${estilos.plegar}`}
+            aria-expanded={!plegada}
+            aria-controls="secciones"
+            onClick={alternar}
+          >
+            <Icono>
+              <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+              <path d="M9.5 4.5v15" />
+            </Icono>
+            <span className={estilos.texto}>{textoBoton}</span>
+          </button>
+        </Tooltip>
+        {enlace(ajustes, estilos.cuenta)}
+      </div>
     </header>
   );
 }

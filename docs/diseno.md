@@ -28,8 +28,11 @@ conecta con las redes y publica. La app no publica en redes.
 
 En escritorio, una barra lateral fija a la izquierda, como en una app de trabajo: el logo arriba,
 las secciones (**Inicio**, **Semanas**, **Estrategias**) con su icono, y **Ajustes** al pie. La
-sección en la que se está, con fondo suave y el icono en azul. En el móvil (por debajo de 768 px),
-barra de arriba: logo y cuenta en una fila, las secciones debajo, solo texto.
+sección en la que se está, con fondo suave y el icono en azul. Al pie, **Plegar barra**: la deja en
+solo iconos (el logo, «H.») y el contenido ocupa el hueco; plegada, cada icono enseña su nombre al
+pasar el ratón (es el nombre de la sección, no un texto de ayuda). Se recuerda en cada navegador,
+como el tema. En el móvil (por debajo de 768 px), barra de arriba: logo y cuenta en una fila, las
+secciones debajo, solo texto y sin plegar.
 
 ### Inicio
 

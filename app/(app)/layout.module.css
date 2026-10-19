@@ -1,9 +1,15 @@
 /* Escritorio: la barra lateral (navegacion.module.css) a la izquierda y el contenido al lado, con
-   aire arriba. En el móvil, la barra va encima y ya da ese aire. */
+   aire arriba. Plegada (lib/barra.ts), la barra se queda en los iconos y el contenido ocupa el
+   hueco. En el móvil, la barra va encima y ya da ese aire. */
 .app {
   display: grid;
   grid-template-columns: 15rem minmax(0, 1fr);
   min-height: 100dvh;
+  transition: grid-template-columns 0.22s ease;
+}
+
+:global(html[data-barra='plegada']) .app {
+  grid-template-columns: 4.5rem minmax(0, 1fr);
 }
 
 .contenido {

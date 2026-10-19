@@ -3,6 +3,7 @@ import { Archivo } from 'next/font/google';
 // Mochi va antes que global.css: así la paleta de Horizon que redefine sus variables gana.
 import 'mochi-ui/styles.css';
 import './global.css';
+import { guionBarra } from '@/lib/barra';
 import { guionTema } from '@/lib/tema';
 import { RestaurarTema } from './restaurar-tema';
 
@@ -38,6 +39,8 @@ export default function Raiz({ children }: LayoutProps<'/'>) {
     <html lang="es" data-theme="system" className={archivo.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: guionTema }} />
+        {/* La barra lateral plegada, igual que el tema: antes de pintar (lib/barra.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: guionBarra }} />
       </head>
       <body>
         {children}
