@@ -1,5 +1,7 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
+import { AceptarEnlace } from './aceptar-enlace';
+import { AvisoEnlaceNoValido } from './aviso-enlace';
 import { FormularioEntrar } from './formulario';
 import estilos from './entrar.module.css';
 
@@ -23,7 +25,9 @@ export default function Entrar({ searchParams }: PageProps<'/entrar'>) {
         <Suspense>
           <AvisoEnlace searchParams={searchParams} />
         </Suspense>
-        <FormularioEntrar />
+        <AceptarEnlace>
+          <FormularioEntrar />
+        </AceptarEnlace>
       </div>
     </main>
   );
@@ -33,9 +37,5 @@ export default function Entrar({ searchParams }: PageProps<'/entrar'>) {
 async function AvisoEnlace({ searchParams }: Pick<PageProps<'/entrar'>, 'searchParams'>) {
   const { error } = await searchParams;
   if (error !== 'enlace') return null;
-  return (
-    <p className={estilos.aviso} role="alert">
-      El enlace no es válido o ha caducado. Pide otro a Mario.
-    </p>
-  );
+  return <AvisoEnlaceNoValido />;
 }

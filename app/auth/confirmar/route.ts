@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { rutaCrearContrasena, rutaEntrar } from '@/lib/supabase/rutas';
 import { crearClienteServidor } from '@/lib/supabase/servidor';
 
+// Para las plantillas propias, que solo se pueden poner con SMTP propio (pendiente): hoy los correos
+// llevan el enlace por defecto de Supabase, que recoge /entrar (app/entrar/aceptar-enlace.tsx).
 // Solo los dos correos que manda Mario desde Supabase: invitación y recuperación (docs/acceso.md).
 // El registro público está desactivado, así que no hay enlaces de alta que confirmar.
 const tiposAceptados: EmailOtpType[] = ['invite', 'recovery'];

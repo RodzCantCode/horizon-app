@@ -7,8 +7,9 @@ export const metadata: Metadata = {
   title: 'Crea tu contraseña · Horizon Sport',
 };
 
-// Aquí llega quien abre el enlace de invitación o de recuperación: /auth/confirmar ya ha
-// comprobado el enlace y abierto la sesión. Sin sesión, proxy.ts manda a /entrar.
+// Aquí llega quien abre el enlace de invitación o de recuperación, con la sesión ya abierta por
+// /entrar (el enlace por defecto de Supabase) o por /auth/confirmar (el de las plantillas propias).
+// Sin sesión, proxy.ts manda a /entrar.
 export default function CrearContrasena() {
   return (
     <main className={estilos.pagina}>

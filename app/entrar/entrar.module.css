@@ -23,7 +23,7 @@
   font-size: clamp(1.75rem, 9vw, 3.5rem);
 }
 
-/* El aviso de un enlace de invitación o de recuperación que no vale (/entrar?error=enlace). */
+/* El aviso de un enlace de invitación o de recuperación que no vale (app/entrar/aviso-enlace.tsx). */
 .aviso {
   margin: -0.75rem 0 1.5rem;
   font-size: 0.875rem;

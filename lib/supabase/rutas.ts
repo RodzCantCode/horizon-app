@@ -4,7 +4,8 @@
 const rutaInicio = '/';
 export const rutaEntrar = '/entrar';
 export const rutaCrearContrasena = '/crear-contrasena';
-// Adonde llevan los enlaces de los correos de invitación y de recuperación (docs/acceso.md).
+// Adonde llevarán los enlaces de los correos de invitación y de recuperación cuando haya plantillas
+// propias (docs/acceso.md); hoy llega a /entrar el enlace por defecto de Supabase.
 const rutaConfirmar = '/auth/confirmar';
 
 /** Adónde redirigir a quien pide `ruta`, o `null` si se queda donde está. */
