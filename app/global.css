@@ -93,6 +93,12 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* El hueco de la barra de desplazamiento se reserva siempre: así el contenido no salta al pasar
+     de una página corta (sin barra) a una larga, ni al abrir un panel (Mochi bloquea el scroll). */
+  scrollbar-gutter: stable;
+  /* Con el hueco reservado, la compensación que Mochi pone al bloquear el scroll (padding-right del
+     ancho de la barra, en línea) empujaría el contenido: se anula. */
+  padding-right: 0 !important;
 }
 
 body {
