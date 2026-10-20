@@ -101,6 +101,10 @@ Supabase está en [docs/acceso.md](docs/acceso.md). Falta:
 3. Antes de usarla con datos reales, una copia periódica de los datos fuera de Supabase (el plan
    gratuito no da copias que Mario pueda restaurar).
 
+**20-oct-2026: rediseño en curso** (calendario con arrastre, piezas y estrategias con nombres
+claros, nuevo Inicio): [docs/rediseno-calendario.md](docs/rediseno-calendario.md). En `preview`:
+navegación lateral, Inicio con la semana en curso y paneles en ventana centrada.
+
 Supabase: proyecto «Horizon Sport - App» (organización «Horizon Sport», plan gratuito, Europa);
 Supabase pausa los proyectos gratuitos tras una semana sin uso y se reactivan desde el panel sin
 perder datos. Vercel: proyecto `horizon-app` (equipo `rodz-dev`, plan Hobby), enlazado al repo.
