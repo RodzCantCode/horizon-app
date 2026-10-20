@@ -1,10 +1,11 @@
-// Lógica pura de la pantalla Semanas: qué semanas se ven, qué plan y qué piezas tiene cada día, y
-// los textos de sus encabezados y de los paneles (pieza, planificar y semana). Sin acceso a datos:
+// Lógica pura de la semana de Inicio: qué semanas se ven, qué plan y qué piezas tiene cada día, y
+// los textos de sus encabezados y de los paneles (pieza, planificar y semana), que también abre el
+// Calendario. Sin acceso a datos:
 // recibe los planes, las piezas y el registro ya leídos (`lib/datos/`) y el día de hoy en España
 // (`hoyEnMadrid`), así se prueba entera.
 
 import { diaSemana, fechaEnMadrid, lunesDe, sumarDias } from '@/lib/fechas';
-import { compararFechaYHora, DESPLAZAMIENTOS, necesitaAtencion } from '@/lib/planes';
+import { compararFechaYHora, necesitaAtencion } from '@/lib/planes';
 import type { Canal, EntradaRegistro, Formato, PiezaDePlan, Plan } from '@/lib/tipos';
 
 export type PosicionSemana = 'pasada' | 'actual' | 'siguiente' | 'lejana';
@@ -128,27 +129,6 @@ export function datosPlan(plan: Plan | null): string {
   return [episodio, plan.invitado, plan.tema].filter(Boolean).join(' · ');
 }
 
-/** «3 piezas, todas programadas», «3 piezas, 2 pendientes», «1 pieza, pendiente»; sin piezas, nada. */
-function resumenPiezas(piezas: PiezaDePlan[]): string | null {
-  if (piezas.length === 0) return null;
-  if (piezas.length === 1) return `1 pieza, ${piezas[0].estado}`;
-  const pendientes = piezas.filter((p) => p.estado === 'pendiente').length;
-  const estado =
-    pendientes === 0 ? 'todas programadas' : `${pendientes} ${pendientes === 1 ? 'pendiente' : 'pendientes'}`;
-  return `${piezas.length} piezas, ${estado}`;
-}
-
-/**
- * Línea de una semana plegada: el episodio (sin invitado ni tema, para que quepa) y cuántas piezas
- * tiene y cuántas faltan por programar. «Ep 04 · 3 piezas, todas programadas».
- */
-export function resumenPlegada(semana: VistaSemana): string {
-  const { plan } = semana;
-  const cabeza = datosPlan(plan ? { ...plan, invitado: null, tema: null } : null);
-  const piezas = resumenPiezas(semana.dias.flatMap((d) => d.piezas));
-  return piezas === null ? cabeza : `${cabeza} · ${piezas}`;
-}
-
 // --- Panel de una pieza ----------------------------------------------
 
 const DIAS_LARGOS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -261,13 +241,3 @@ export function esAvisoDeDesfase(error: string): boolean {
   return error === AVISO_PIEZA_CAMBIADA || error === AVISO_SEMANA_CAMBIADA;
 }
 
-/**
- * Los días en que puede ir una pieza de un plan, de D-1 a D+5, para elegirlos en un panel:
- * «Jueves 22 oct · D-1».
- */
-export function diasDelPlan(diaD: string): { fecha: string; etiqueta: string }[] {
-  return DESPLAZAMIENTOS.map((desplazamiento) => {
-    const fecha = sumarDias(diaD, desplazamiento);
-    return { fecha, etiqueta: `${fechaLarga(fecha)} · ${posicionRespectoAD(desplazamiento)}` };
-  });
-}

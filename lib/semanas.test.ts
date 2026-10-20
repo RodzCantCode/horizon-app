@@ -3,7 +3,6 @@ import {
   avisoDePieza,
   construirSemanas,
   datosPlan,
-  diasDelPlan,
   esAvisoDeDesfase,
   estadoDePieza,
   etiquetaDia,
@@ -14,7 +13,6 @@ import {
   pasaALaSemana,
   posicionRespectoAD,
   rangoSemanas,
-  resumenPlegada,
   textoCanales,
   textoFormato,
   textoPreparacion,
@@ -219,25 +217,6 @@ describe('datosPlan', () => {
   });
 });
 
-describe('resumenPlegada', () => {
-  const semana = (plan: Plan | null, piezas: PiezaDePlan[]) =>
-    construirSemanas(plan ? [plan] : [], piezas, '2026-10-15').find((s) => s.lunes === '2026-10-12')!;
-
-  it('cuenta las piezas y cuántas faltan por programar', () => {
-    const todas = piezasEp05().slice(0, 3).map((p) => ({ ...p, estado: 'programada' as const }));
-    expect(resumenPlegada(semana(planEp05, todas))).toBe('Ep 05 · 3 piezas, todas programadas');
-    expect(resumenPlegada(semana(planEp05, piezasEp05()))).toBe('Ep 05 · 3 piezas, 2 pendientes');
-    expect(resumenPlegada(semana(planEp05, piezasEp05().slice(1, 2)))).toBe('Ep 05 · 1 pieza, pendiente');
-    expect(resumenPlegada(semana(planEp05, piezasEp05().slice(0, 1)))).toBe('Ep 05 · 1 pieza, programada');
-  });
-
-  it('sin piezas, solo los datos del plan', () => {
-    expect(resumenPlegada(semana(planEp05, []))).toBe('Ep 05');
-    expect(resumenPlegada(semana(null, []))).toBe('Sin planificar');
-    expect(resumenPlegada(semana(null, piezasEp05().slice(1, 2)))).toBe('Sin planificar · 1 pieza, pendiente');
-  });
-});
-
 describe('fechaYPosicion', () => {
   it('día de la semana, fecha, hora y posición respecto al día D', () => {
     const [, clipPrincipal, clipSecundario, valor] = piezasEp05();
@@ -342,20 +321,6 @@ describe('pasaALaSemana', () => {
   it('una semana entre dos años lleva el año del domingo', () => {
     expect(pasaALaSemana('2026-12-28', '2026-12-16')).toBe('Pasa a la semana del 28 dic al 3 ene de 2027');
     expect(pasaALaSemana('2025-12-29', '2026-01-07')).toBe('Pasa a la semana del 29 dic al 4 ene de 2026');
-  });
-});
-
-describe('diasDelPlan', () => {
-  it('los siete días de D-1 a D+5 con su fecha y su posición', () => {
-    expect(diasDelPlan('2026-10-23')).toEqual([
-      { fecha: '2026-10-22', etiqueta: 'Jueves 22 oct · D-1' },
-      { fecha: '2026-10-23', etiqueta: 'Viernes 23 oct · D' },
-      { fecha: '2026-10-24', etiqueta: 'Sábado 24 oct · D+1' },
-      { fecha: '2026-10-25', etiqueta: 'Domingo 25 oct · D+2' },
-      { fecha: '2026-10-26', etiqueta: 'Lunes 26 oct · D+3' },
-      { fecha: '2026-10-27', etiqueta: 'Martes 27 oct · D+4' },
-      { fecha: '2026-10-28', etiqueta: 'Miércoles 28 oct · D+5' },
-    ]);
   });
 });
 

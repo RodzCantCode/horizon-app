@@ -2,12 +2,11 @@
 
 import { startTransition, useEffect, useId, useRef, useState, useTransition, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Button, PencilIcon, Select, TextField } from 'mochi-ui';
-import { existeEnMadrid, normalizarHora } from '@/lib/fechas';
+import { Button, PencilIcon, TextField } from 'mochi-ui';
+import { esFecha, existeEnMadrid, normalizarHora } from '@/lib/fechas';
 import {
   avisoDePieza,
   datosPlan,
-  diasDelPlan,
   esAvisoDeDesfase,
   estadoDePieza,
   fechaLarga,
@@ -39,7 +38,7 @@ const SIN_CONEXION = 'No se ha podido conectar. Vuelve a intentarlo.';
  * pieza en la semana (Mochi lo devuelve a lo que lo tenía al abrir, pero tras una recarga no había
  * nada, y Safari no enfoca los enlaces al pulsarlos).
  *
- * Con el lápiz pasa a modo edición (docs/diseno.md § Paneles de detalle): día de D-1 a D+5 y hora,
+ * Con el lápiz pasa a modo edición (docs/diseno.md § Paneles de detalle): día (cualquiera) y hora,
  * con **Guardar** y **Cancelar**, y **Quitar de este plan**, que pide confirmación dentro del panel.
  * Al quitarla, el panel se cierra. El modo es estado del panel, no va en la URL: al cerrarlo, se
  * pierde.
@@ -220,9 +219,10 @@ function DatosPieza({
 }
 
 /**
- * La pieza en modo edición: día (de D-1 a D+5 de su plan) y hora (vacía, sin hora), con el mismo
- * aviso que al planificar si la hora no existe en España ese día. **Guardar** es la acción principal
- * (azul); lo demás, superficie. **Quitar de este plan** pregunta antes en una fila del propio panel.
+ * La pieza en modo edición: día (cualquiera, no solo alrededor de su episodio) y hora (vacía, sin
+ * hora), con el mismo aviso que al planificar si la hora no existe en España ese día. **Guardar** es
+ * la acción principal (azul); lo demás, superficie. **Quitar de este plan** pregunta antes en una
+ * fila del propio panel.
  *
  * El servidor vuelve a comprobarlo todo y, si estaba programada y cambia, la deja para revisar en
  * Metricool; si otra persona la ha movido con el panel abierto, no guarda y se vuelve a ver la pieza
@@ -231,7 +231,7 @@ function DatosPieza({
  * panel).
  */
 function EditarPieza({
-  detalle: { pieza, plan },
+  detalle: { pieza },
   alTerminar,
   alDesfasarse,
   alQuitar,
@@ -247,7 +247,7 @@ function EditarPieza({
   const [guardando, iniciarGuardar] = useTransition();
 
   const horaNormal = normalizarHora(hora);
-  const horaNoExiste = horaNormal !== null && !existeEnMadrid(fecha, horaNormal);
+  const horaNoExiste = horaNormal !== null && esFecha(fecha) && !existeEnMadrid(fecha, horaNormal);
 
   function guardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -273,12 +273,7 @@ function EditarPieza({
     <>
       <form className={estilos.edicion} onSubmit={guardar} noValidate>
         <div className={estilos.campos}>
-          <Select
-            label="Día"
-            options={diasDelPlan(plan.diaD).map((d) => ({ value: d.fecha, label: d.etiqueta }))}
-            value={fecha}
-            onValueChange={setFecha}
-          />
+          <TextField type="date" label="Día" value={fecha} onValueChange={setFecha} />
           <TextField
             label="Hora"
             autoComplete="off"

@@ -59,6 +59,11 @@ export function etiquetaDe(plan: Plan): string {
   return plan.numero === null ? 'Del episodio' : `Del ${plan.numero}`;
 }
 
+/** Lo que dice la tarjeta del episodio: «Episodio 06», o «Episodio» si aún no tiene número. */
+export function tituloEpisodio(plan: Plan): string {
+  return plan.numero === null ? 'Episodio' : `Episodio ${plan.numero}`;
+}
+
 /** Hora de una tarjeta, para ordenarla dentro del día. El episodio sin hora va al final. */
 function horaDe(tarjeta: TarjetaCalendario): string | null {
   return tarjeta.tipo === 'post' ? tarjeta.pieza.hora : tarjeta.plan.horaEpisodio;

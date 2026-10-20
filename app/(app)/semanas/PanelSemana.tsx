@@ -6,15 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Button, PencilIcon, RadioGroup, Select, TextField } from 'mochi-ui';
 import { esFecha, existeEnMadrid, lunesDe, normalizarHora } from '@/lib/fechas';
 import { estrategiasParaPlanificar } from '@/lib/planes';
-import {
-  diasDelPlan,
-  esAvisoDeDesfase,
-  etiquetaDia,
-  fechaLarga,
-  pasaALaSemana,
-  rangoSemanas,
-  tituloSemana,
-} from '@/lib/semanas';
+import { esAvisoDeDesfase, etiquetaDia, fechaLarga, pasaALaSemana, tituloSemana } from '@/lib/semanas';
 import type { Estrategia, Pieza, PiezaDePlan, Plan } from '@/lib/tipos';
 import { BotonesGuardar, useEnvio } from '../componentes/edicion';
 import { Panel, useFocoAlCambiarDeVista, useMientrasSeCierra } from '../componentes/Panel';
@@ -162,6 +154,16 @@ function DatosSemana({
   alEditar: () => void;
 }) {
   const idPiezas = useId();
+  const parametros = useSearchParams();
+
+  // Abre el panel de la pieza en lugar de este, sin perder lo demás de la URL (la semana que enseña
+  // el Calendario, `?desde=`).
+  function enlaceAPieza(id: string) {
+    const siguientes = new URLSearchParams(parametros.toString());
+    siguientes.delete('semana');
+    siguientes.set('pieza', id);
+    return `?${siguientes.toString()}`;
+  }
 
   return (
     <>
@@ -170,7 +172,7 @@ function DatosSemana({
           <dt>Episodio</dt>
           <dd>{plan.conEpisodio ? (plan.numero ? `Ep ${plan.numero}` : 'Sin número') : 'Sin episodio'}</dd>
           <dt>{plan.conEpisodio ? 'Publicación' : 'Referencia'}</dt>
-          <dd>{fechaLarga(plan.diaD)}</dd>
+          <dd>{[fechaLarga(plan.diaD), plan.conEpisodio && plan.horaEpisodio].filter(Boolean).join(' · ')}</dd>
           {plan.invitado && (
             <>
               <dt>Invitado</dt>
@@ -205,8 +207,7 @@ function DatosSemana({
           <ul className={estilos.piezasSemana}>
             {piezasDelPlan.map((p) => (
               <li key={p.id}>
-                {/* Abre su panel en lugar de este (la URL lleva solo la pieza). */}
-                <Link href={`?pieza=${p.id}`} scroll={false} className={estilos.piezaSemana}>
+                <Link href={enlaceAPieza(p.id)} scroll={false} className={estilos.piezaSemana}>
                   <MarcaEstado pieza={p} hoy={hoy} />
                   <span className={estilos.diaPrevia}>{etiquetaDia(p.fecha)}</span>
                   <span className={estilos.horaPrevia}>{p.hora}</span>
@@ -224,8 +225,9 @@ function DatosSemana({
 }
 
 /**
- * El modo edición de la semana: con episodio, su número, invitado y tema con **Guardar** y
- * **Cancelar**; debajo, para todas, los otros tres cambios, cada uno en su vista.
+ * El modo edición de la semana: con episodio, su número, invitado, tema y hora con **Guardar** y
+ * **Cancelar** (gana el último que guarda, sin aviso de desfase); debajo, para todas, los otros tres
+ * cambios, cada uno en su vista.
  */
 function EditarSemana({
   plan,
@@ -239,12 +241,15 @@ function EditarSemana({
   const [numero, setNumero] = useState(plan.numero ?? '');
   const [invitado, setInvitado] = useState(plan.invitado ?? '');
   const [tema, setTema] = useState(plan.tema ?? '');
+  const [hora, setHora] = useState(plan.horaEpisodio ?? '');
   const { enviando, error, enviar } = useEnvio();
+
+  const horaNormal = normalizarHora(hora);
+  const horaNoExiste = horaNormal !== null && !existeEnMadrid(plan.diaD, horaNormal);
 
   function guardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
-    // La hora del episodio aún no se edita aquí: se guarda la que tiene.
-    enviar(() => editarEpisodio(plan.id, { numero, invitado, tema, hora: plan.horaEpisodio }), alTerminar);
+    enviar(() => editarEpisodio(plan.id, { numero, invitado, tema, hora }), alTerminar);
   }
 
   return (
@@ -261,7 +266,13 @@ function EditarSemana({
             />
             <TextField label="Invitado" autoComplete="off" value={invitado} onValueChange={setInvitado} />
             <TextField label="Tema" autoComplete="off" value={tema} onValueChange={setTema} />
+            <TextField label="Hora" autoComplete="off" placeholder="hh:mm" value={hora} onValueChange={setHora} />
           </div>
+          {horaNoExiste && (
+            <p className={estilos.avisoHora}>
+              {`Las ${horaNormal} del ${fechaLarga(plan.diaD).toLowerCase()} no existen en España por el cambio de horario.`}
+            </p>
+          )}
           <BotonesGuardar guardando={enviando} error={error} alCancelar={alTerminar} />
         </form>
       )}
@@ -287,11 +298,10 @@ function EditarSemana({
 }
 
 /**
- * **Mover la semana**: un día D nuevo dentro de las semanas que se ven en la portada (solo lo limita
- * este panel; el servidor ya no). Todas las piezas se mueven los mismos días y las programadas quedan para
- * revisar en Metricool (lo hace la base). Si cae en otra semana, se dice antes de guardar y, al
- * guardar, el plan pasa a esa semana y el panel se cierra; si esa semana ya tiene plan, el servidor
- * lo dice y no cambia nada.
+ * **Mover la semana**: un día D nuevo, cualquiera. Todas las piezas se mueven los mismos días y las
+ * programadas quedan para revisar en Metricool (lo hace la base). Si cae en otra semana, se dice
+ * antes de guardar y, al guardar, el plan pasa a esa semana y el panel se cierra; si esa semana ya
+ * tiene plan, el servidor lo dice y no cambia nada.
  */
 function MoverSemana({
   lunes,
@@ -309,7 +319,6 @@ function MoverSemana({
   const [diaD, setDiaD] = useState(plan.diaD);
   const { enviando, error, enviar } = useEnvio();
   const nuevoLunes = esFecha(diaD) ? lunesDe(diaD) : lunes;
-  const portada = rangoSemanas(hoy);
 
   function guardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -323,8 +332,6 @@ function MoverSemana({
         <TextField
           type="date"
           label={plan.conEpisodio ? 'Nuevo día de publicación' : 'Nuevo día de referencia'}
-          min={portada.desde}
-          max={portada.hasta}
           value={diaD}
           onValueChange={setDiaD}
         />
@@ -433,11 +440,11 @@ function CambiarEstrategia({ datos, alTerminar }: { datos: DatosDeSemana; alTerm
 }
 
 /**
- * **Añadir una pieza suelta**: una pieza que no esté archivada, el día (de D-1 a D+5) y la hora, que
- * empieza siendo la habitual de la pieza y cambia con ella. Avisa, como al planificar, si la hora no
- * existe en España ese día. La pieza se copia en el servidor desde la base; la de origen no cambia.
- * Si otra persona ha movido la semana entretanto, no se añade y se vuelve a ver la semana con el
- * aviso (`alDesfasarse`): al volver aquí, los días salen ya del día D nuevo.
+ * **Añadir una pieza suelta**: una pieza que no esté archivada, el día (cualquiera; empieza en el día
+ * D) y la hora, que empieza siendo la habitual de la pieza y cambia con ella. Avisa, como al
+ * planificar, si la hora no existe en España ese día. La pieza se copia en el servidor desde la base;
+ * la de origen no cambia. Si otra persona ha movido la semana entretanto, no se añade y se vuelve a
+ * ver la semana con el aviso (`alDesfasarse`): al volver aquí, el día empieza ya en el día D nuevo.
  */
 function AnadirPieza({
   datos,
@@ -456,7 +463,7 @@ function AnadirPieza({
   const { enviando, error, enviar } = useEnvio();
 
   const horaNormal = normalizarHora(hora);
-  const horaNoExiste = horaNormal !== null && !existeEnMadrid(fecha, horaNormal);
+  const horaNoExiste = horaNormal !== null && esFecha(fecha) && !existeEnMadrid(fecha, horaNormal);
 
   function elegirPieza(id: string) {
     setPiezaId(id);
@@ -495,12 +502,7 @@ function AnadirPieza({
           value={piezaId}
           onValueChange={elegirPieza}
         />
-        <Select
-          label="Día"
-          options={diasDelPlan(plan.diaD).map((d) => ({ value: d.fecha, label: d.etiqueta }))}
-          value={fecha}
-          onValueChange={setFecha}
-        />
+        <TextField type="date" label="Día" value={fecha} onValueChange={setFecha} />
         <TextField label="Hora" autoComplete="off" placeholder="hh:mm" value={hora} onValueChange={setHora} />
       </div>
       {horaNoExiste && (

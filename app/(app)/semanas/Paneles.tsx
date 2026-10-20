@@ -11,7 +11,7 @@ import { PanelSemana } from './PanelSemana';
 
 type Parametros = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
-// Los paneles que se abren desde las semanas, en Inicio y en Semanas: pulsar una pieza abre el suyo
+// Los paneles que se abren desde las semanas, en Inicio y en el Calendario: pulsar una pieza abre el suyo
 // (?pieza=<id>), donde se marca como programada o se edita; Planificar abre el de planificar esa
 // semana (?planificar=<lunes>), y el encabezado de una semana con plan, el de esa semana
 // (?semana=<lunes>). Cada uno en su propio <Suspense>, para que la página no espere a los paneles ni

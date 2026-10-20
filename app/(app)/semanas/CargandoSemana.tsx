@@ -1,7 +1,7 @@
 import { Skeleton } from 'mochi-ui';
 import estilos from '../inicio.module.css';
 
-// Lo que se ve mientras llegan las semanas (Inicio y Semanas): la forma de la semana actual
+// Lo que se ve mientras llega la semana de Inicio: la forma de la semana actual
 // (titular, datos y días).
 export function CargandoSemana() {
   return (

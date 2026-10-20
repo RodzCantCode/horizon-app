@@ -62,6 +62,9 @@ const filaPieza: Tables<'plan_piezas'> = {
   revisar: false,
 };
 
+// Como llega de leerSemanas: cada post con su plan anidado («*, planes(*)»).
+const filaPiezaConPlan = { ...filaPieza, planes: filaPlan };
+
 function preparar(planes: { data: unknown; error: unknown }, piezas: { data: unknown; error: unknown }) {
   consultas.set('planes', { llamadas: [], resultado: planes });
   consultas.set('plan_piezas', { llamadas: [], resultado: piezas });
@@ -79,14 +82,39 @@ describe('leerSemanas', () => {
     expect(planes).toContainEqual(['lte', 'lunes', '2026-11-01']);
 
     const piezas = consultas.get('plan_piezas')!.llamadas;
+    expect(piezas).toContainEqual(['select', '*, planes(*)']);
     expect(piezas).toContainEqual(['gte', 'fecha', '2026-10-05']);
     expect(piezas).toContainEqual(['lte', 'fecha', '2026-11-01']);
+  });
+
+  it('añade el plan de cada post aunque su lunes caiga fuera del rango, sin repetirlo y por orden de semana', async () => {
+    // El 05 empezó antes del rango y el 07 empieza después (un D-7), pero sus posts caen dentro.
+    const planAnterior = { ...filaPlan, id: 'plan04', lunes: '2026-09-28', dia_d: '2026-10-02', numero: '04' };
+    const planPosterior = { ...filaPlan, id: 'plan07', lunes: '2026-11-02', dia_d: '2026-11-06', numero: '07' };
+    const planDelRango = { ...filaPlan, id: 'plan06', lunes: '2026-10-19', dia_d: '2026-10-23', numero: '06' };
+    preparar(
+      { data: [planDelRango], error: null },
+      {
+        data: [
+          { ...filaPieza, id: 'p1', plan_id: 'plan04', fecha: '2026-10-06', planes: planAnterior },
+          { ...filaPieza, id: 'p2', plan_id: 'plan04', fecha: '2026-10-08', planes: planAnterior },
+          { ...filaPieza, id: 'p3', plan_id: 'plan06', fecha: '2026-10-23', planes: planDelRango },
+          { ...filaPieza, id: 'p4', plan_id: 'plan07', fecha: '2026-10-30', planes: planPosterior },
+        ],
+        error: null,
+      },
+    );
+    const { planes, piezas } = await leerSemanas('2026-10-05', '2026-11-01');
+
+    expect(planes.map((p) => p.id)).toEqual(['plan04', 'plan06', 'plan07']);
+    expect(planes[0]).toEqual(expect.objectContaining({ lunes: '2026-09-28', numero: '04', horaEpisodio: '19:00' }));
+    expect(piezas.map((p) => p.id)).toEqual(['p1', 'p2', 'p3', 'p4']);
   });
 
   it('pasa las filas a los tipos de la app, con la hora como HH:MM', async () => {
     preparar(
       { data: [filaPlan], error: null },
-      { data: [filaPieza, { ...filaPieza, id: 'b5', hora: null }], error: null },
+      { data: [filaPiezaConPlan, { ...filaPiezaConPlan, id: 'b5', hora: null }], error: null },
     );
     const { planes, piezas } = await leerSemanas('2026-10-05', '2026-11-01');
 
@@ -133,10 +161,10 @@ describe('leerSemanas', () => {
   });
 
   it('un formato, estado o canal que la app no conoce es un error, no un valor más', async () => {
-    preparar({ data: [], error: null }, { data: [{ ...filaPieza, estado: 'publicada' }], error: null });
+    preparar({ data: [], error: null }, { data: [{ ...filaPiezaConPlan, estado: 'publicada' }], error: null });
     await expect(leerSemanas('2026-10-05', '2026-11-01')).rejects.toThrow('«publicada»');
 
-    preparar({ data: [], error: null }, { data: [{ ...filaPieza, canales: ['ig', 'x'] }], error: null });
+    preparar({ data: [], error: null }, { data: [{ ...filaPiezaConPlan, canales: ['ig', 'x'] }], error: null });
     await expect(leerSemanas('2026-10-05', '2026-11-01')).rejects.toThrow('«x»');
   });
 });

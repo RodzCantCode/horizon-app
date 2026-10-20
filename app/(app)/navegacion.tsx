@@ -34,8 +34,8 @@ const secciones = [
     icono: <path d="M4 10.5 12 4l8 6.5V20h-5.5v-6h-5v6H4z" />,
   },
   {
-    href: '/semanas',
-    texto: 'Semanas',
+    href: '/calendario',
+    texto: 'Calendario',
     icono: (
       <>
         <rect x="3.5" y="5" width="17" height="15" rx="2" />

@@ -6,6 +6,7 @@ import {
   rangoCalendario,
   rangoMiniFila,
   SEMANAS_CALENDARIO,
+  tituloEpisodio,
 } from '@/lib/calendario';
 import type { Estrategia, PiezaDePlan, Plan } from '@/lib/tipos';
 
@@ -93,6 +94,13 @@ describe('etiquetaDe', () => {
 
   it('«Sin episodio» si no tiene episodio', () => {
     expect(etiquetaDe(plan({ conEpisodio: false, numero: null }))).toBe('Sin episodio');
+  });
+});
+
+describe('tituloEpisodio', () => {
+  it('«Episodio 06» con número; «Episodio» sin él', () => {
+    expect(tituloEpisodio(plan({ numero: '06' }))).toBe('Episodio 06');
+    expect(tituloEpisodio(plan({ numero: null }))).toBe('Episodio');
   });
 });
 

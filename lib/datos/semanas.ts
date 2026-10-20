@@ -95,8 +95,11 @@ export function aFilaPiezaDePlan(
 
 /**
  * Planes cuyo lunes cae entre `desde` y `hasta`, y piezas de cualquier plan cuya fecha cae entre las
- * dos (así llegan también las que cruzan desde la semana anterior). Si Supabase falla, lanza un
- * error: mejor una página de error que unas semanas vacías que parezcan sin planificar.
+ * dos (así llegan también las que cruzan desde la semana anterior). A los planes se suman los de esas
+ * piezas aunque su lunes caiga fuera (un plan que empezó antes o que empieza después con un D-7),
+ * para que el Calendario diga de qué episodio es cada post; todos por orden de semana. Si Supabase
+ * falla, lanza un error: mejor una página de error que unas semanas vacías que parezcan sin
+ * planificar.
  */
 export async function leerSemanas(
   desde: string,
@@ -107,7 +110,7 @@ export async function leerSemanas(
     supabase.from('planes').select('*').gte('lunes', desde).lte('lunes', hasta).order('lunes'),
     supabase
       .from('plan_piezas')
-      .select('*')
+      .select('*, planes(*)')
       .gte('fecha', desde)
       .lte('fecha', hasta)
       .order('fecha')
@@ -118,9 +121,15 @@ export async function leerSemanas(
   const error = planes.error ?? piezas.error;
   if (error) throw new Error('No se han podido leer las semanas', { cause: error });
 
+  const filas = piezas.data ?? [];
+  const planesPorId = new Map<string, Plan>();
+  for (const fila of [...(planes.data ?? []), ...filas.map((f) => f.planes)]) {
+    if (!planesPorId.has(fila.id)) planesPorId.set(fila.id, aPlan(fila));
+  }
+
   return {
-    planes: (planes.data ?? []).map(aPlan),
-    piezas: (piezas.data ?? []).map(aPiezaDePlan),
+    planes: [...planesPorId.values()].sort((a, b) => a.lunes.localeCompare(b.lunes)),
+    piezas: filas.map(aPiezaDePlan),
   };
 }
 

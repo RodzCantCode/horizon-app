@@ -20,15 +20,6 @@ export function compararFechaYHora(
 }
 
 /**
- * Los días respecto a D en que puede ir una pieza, en una estrategia o en un plan: de D-1 a D+5 (el
- * mismo límite que pone la base en estrategia_piezas).
- *
- * Provisional: el rediseño del calendario lo sustituye por `DESPLAZAMIENTOS_ESTRATEGIA` y se quita
- * cuando cada pantalla que lo usa pase a la nueva.
- */
-export const DESPLAZAMIENTOS: readonly number[] = [-1, 0, 1, 2, 3, 4, 5];
-
-/**
  * Los días respecto a D que ofrece una estrategia: de D-7 a D+14 (el mismo límite que pone la base en
  * estrategia_piezas). Solo acota lo que se elige al crear o editar una estrategia: un post de un plan
  * puede llevarse a cualquier fecha (ver `desplazamientoDe`).
