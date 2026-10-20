@@ -24,21 +24,23 @@ export function aPieza(fila: Tables<'piezas'>): Pieza {
 
 /** Una estrategia con sus filas de `estrategia_piezas` anidadas, como la da la consulta de abajo. */
 type FilaEstrategia = Tables<'estrategias'> & {
-  estrategia_piezas: Pick<Tables<'estrategia_piezas'>, 'pieza_id' | 'desplazamiento'>[];
+  estrategia_piezas: Pick<Tables<'estrategia_piezas'>, 'id' | 'pieza_id' | 'desplazamiento'>[];
 };
 
 /**
- * Las piezas de la estrategia van por día, de D-1 a D+5: la base no guarda otro orden. Dos en el
- * mismo día quedan como lleguen.
+ * Las piezas de la estrategia van por día, de D-7 a D+14: la base no guarda otro orden. Dos en el
+ * mismo día van por el id de su fila de `estrategia_piezas`, para que salgan siempre igual: PostgREST
+ * no garantiza el orden de las filas anidadas, y `crearPlan` empareja las fechas del borrador con los
+ * ítems por posición.
  */
 export function aEstrategia(fila: FilaEstrategia): Estrategia {
   return {
     id: fila.id,
     nombre: fila.nombre,
     conEpisodio: fila.con_episodio,
-    items: fila.estrategia_piezas
-      .map((item) => ({ piezaId: item.pieza_id, desplazamiento: item.desplazamiento }))
-      .sort((a, b) => a.desplazamiento - b.desplazamiento),
+    items: [...fila.estrategia_piezas]
+      .sort((a, b) => a.desplazamiento - b.desplazamiento || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+      .map((item) => ({ piezaId: item.pieza_id, desplazamiento: item.desplazamiento })),
   };
 }
 
@@ -53,7 +55,7 @@ export async function leerEstrategiasYPiezas(): Promise<{ estrategias: Estrategi
     supabase.from('piezas').select('*').order('nombre'),
     supabase
       .from('estrategias')
-      .select('id, nombre, con_episodio, estrategia_piezas(pieza_id, desplazamiento)')
+      .select('id, nombre, con_episodio, estrategia_piezas(id, pieza_id, desplazamiento)')
       .order('nombre'),
   ]);
 

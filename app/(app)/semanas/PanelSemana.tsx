@@ -43,7 +43,7 @@ type Vista = 'ver' | 'editar' | 'mover' | 'estrategia' | 'anadir';
  * vista con su **Guardar** y su **Cancelar**. Al terminar se vuelve a ver la semana; si se ha movido
  * a otra semana, el panel se cierra (ya no es esta) y el foco va al encabezado de la nueva.
  *
- * Se abre y se cierra como los demás paneles (PanelPlanificar.tsx): abierto mientras la URL lleve su
+ * Se abre y se cierra como el de una pieza (PanelPieza.tsx): abierto mientras la URL lleve su
  * lunes, se cierra quitándolo con history.pushState y, al cerrarse, el foco vuelve a su encabezado.
  */
 export function PanelSemana({ lunes, datos, hoy }: { lunes: string; datos: DatosDeSemana | null; hoy: string }) {
@@ -52,7 +52,7 @@ export function PanelSemana({ lunes, datos, hoy }: { lunes: string; datos: Datos
   // Adónde vuelve el foco al cerrar: su encabezado o, si el plan se ha movido, el de su semana nueva.
   const destinoDelFoco = useRef(lunes);
 
-  // Lee la URL de ese momento, no la del último pintado, como PanelPlanificar: también se llama al
+  // Lee la URL de ese momento, no la del último pintado, como PanelPieza: también se llama al
   // terminar de mover la semana, y para entonces el panel puede estar cerrado.
   function cerrar() {
     const siguientes = new URLSearchParams(window.location.search);

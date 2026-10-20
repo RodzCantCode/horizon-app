@@ -6,9 +6,9 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  useTransition,
   type DragEvent,
   type FormEvent,
+  type TransitionStartFunction,
 } from 'react';
 import { Button, RadioGroup, TextField } from 'mochi-ui';
 import { etiquetaDe, tituloEpisodio } from '@/lib/calendario';
@@ -109,21 +109,45 @@ export function useSePuedeArrastrar(): boolean {
   );
 }
 
+// Todos los arrastres del Calendario (borrador y tarjetas guardadas) llevan solo este tipo propio:
+// un campo de texto no lo acepta, así que soltar una tarjeta en «Invitado» no escribe nada en él. Lo
+// que se arrastra lo sabe Calendario.tsx por su estado, no por este dato.
+const TIPO_ARRASTRE = 'application/x-horizon-tarjeta';
+
+/**
+ * Al empezar a arrastrar una tarjeta: quita lo que el navegador pone por su cuenta (en un enlace, su
+ * dirección como texto) y deja solo el tipo propio. Hay que poner algún dato: Firefox no empieza a
+ * arrastrar sin él.
+ */
+export function empezarArrastre(datos: DataTransfer, valor: string) {
+  datos.clearData();
+  datos.setData(TIPO_ARRASTRE, valor);
+  datos.effectAllowed = 'move';
+}
+
 /**
  * El panel de programar: título, **Guardar** (azul, la acción principal mientras se programa) y
  * **Cancelar** con el error al lado, ¿Hay episodio?, los datos del episodio (o el día de referencia)
  * y las estrategias con su número de posts y su mini fila. Pulsar una estrategia pega sus posts en el
  * calendario. Si `crearPlan` devuelve un error, se enseña y el modo sigue abierto con lo colocado.
+ *
+ * La transición de **Guardar** (`guardando`, `iniciar`) es de Calendario.tsx, que deja de dejar
+ * arrastrar mientras dura. Aquí, mientras dura, no se cancela ni se cambia nada: el plan se crea con
+ * lo que había al pulsar, y cancelar o cambiar algo entonces no lo evitaría.
  */
 export function PanelProgramar({
   programacion,
   datos,
+  guardando,
+  iniciar,
   alCambiar,
   alGuardar,
   alCancelar,
 }: {
   programacion: Programacion;
   datos: DatosParaProgramar;
+  guardando: boolean;
+  iniciar: TransitionStartFunction;
   alCambiar: (cambio: (p: Programacion) => Programacion) => void;
   alGuardar: () => void;
   alCancelar: () => void;
@@ -131,7 +155,6 @@ export function PanelProgramar({
   const { borrador, numero, invitado, tema } = programacion;
   const [error, setError] = useState<string | null>(null);
   const [faltaNumero, setFaltaNumero] = useState(false);
-  const [guardando, iniciar] = useTransition();
   const titulo = useRef<HTMLHeadingElement>(null);
 
   // Al abrirse, el foco va al título, para que se anuncie. Sin desplazar la página: al pulsar un día
@@ -205,7 +228,7 @@ export function PanelProgramar({
             <Button type="submit" variant="accent" status={guardando ? 'loading' : 'idle'} loadingLabel="Guardando">
               Guardar
             </Button>
-            <Button variant="surface" onClick={alCancelar}>
+            <Button variant="surface" onClick={alCancelar} disabled={guardando}>
               Cancelar
             </Button>
           </div>
@@ -223,6 +246,7 @@ export function PanelProgramar({
           { value: 'no', label: 'No' },
         ]}
         value={borrador.conEpisodio ? 'si' : 'no'}
+        disabled={guardando}
         onValueChange={(valor) => {
           cambiarBorrador((b) => cambiarConEpisodio(b, valor === 'si'));
           setError(null);
@@ -237,6 +261,7 @@ export function PanelProgramar({
               inputMode="numeric"
               autoComplete="off"
               value={numero}
+              readOnly={guardando}
               onValueChange={(valor) => {
                 alCambiar((p) => ({ ...p, numero: valor }));
                 setFaltaNumero(false);
@@ -247,12 +272,14 @@ export function PanelProgramar({
               label="Invitado"
               autoComplete="off"
               value={invitado}
+              readOnly={guardando}
               onValueChange={(valor) => alCambiar((p) => ({ ...p, invitado: valor }))}
             />
             <TextField
               label="Tema"
               autoComplete="off"
               value={tema}
+              readOnly={guardando}
               onValueChange={(valor) => alCambiar((p) => ({ ...p, tema: valor }))}
             />
           </>
@@ -262,6 +289,7 @@ export function PanelProgramar({
           type="date"
           label={borrador.conEpisodio ? 'Día del episodio' : 'Día de referencia'}
           value={borrador.diaD}
+          readOnly={guardando}
           onValueChange={(valor) => {
             if (esFecha(valor)) cambiarBorrador((b) => moverEpisodioBorrador(b, valor, estrategia));
           }}
@@ -272,6 +300,7 @@ export function PanelProgramar({
             autoComplete="off"
             placeholder="hh:mm"
             value={borrador.horaEpisodio ?? ''}
+            readOnly={guardando}
             onValueChange={(valor) =>
               cambiarBorrador((b) => ({ ...b, horaEpisodio: valor.trim() === '' ? null : valor }))
             }
@@ -301,6 +330,7 @@ export function PanelProgramar({
             ),
           }))}
           value={estrategia?.id ?? null}
+          disabled={guardando}
           onValueChange={(id) => {
             const elegida = disponibles.find((e) => e.id === id);
             if (elegida) cambiarBorrador((b) => elegirEstrategia(b, elegida));
@@ -347,9 +377,7 @@ export function TarjetaBorrador({
     ? {
         draggable: true,
         onDragStart: (evento: DragEvent<HTMLDivElement>) => {
-          evento.dataTransfer.effectAllowed = 'move';
-          // Firefox no empieza a arrastrar sin algún dato.
-          evento.dataTransfer.setData('text/plain', tarjeta.tipo === 'post' ? tarjeta.post.nombre : 'Episodio');
+          empezarArrastre(evento.dataTransfer, tarjeta.tipo === 'post' ? `borrador-${tarjeta.post.indice}` : 'borrador-episodio');
           alEmpezar(tarjeta.tipo === 'post' ? { tipo: 'post', indice: tarjeta.post.indice } : { tipo: 'episodio' });
           setArrastrando(true);
         },

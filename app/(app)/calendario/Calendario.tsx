@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type DragEvent, type ReactNode } from 'react';
+import { useEffect, useState, useTransition, type DragEvent, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button, LinkButton } from 'mochi-ui';
@@ -59,6 +59,8 @@ export function Calendario({
   const [programarVisto, setProgramarVisto] = useState(programar);
   const [arrastre, setArrastre] = useState<Arrastre | null>(null);
   const [sobre, setSobre] = useState<string | null>(null);
+  // Mientras Guardar crea el plan, el borrador no se arrastra (PanelProgramar no deja cambiar nada).
+  const [guardandoPlan, iniciarGuardadoPlan] = useTransition();
   if (programar !== programarVisto) {
     setProgramarVisto(programar);
     if (programar !== null) setProgramacion(nuevaProgramacion(datos, programar));
@@ -91,7 +93,7 @@ export function Calendario({
   // Lo que pinta el borrador: la estrategia elegida (si se puede usar), sus posts y el episodio.
   const estrategia = programacion && estrategiaElegida(programacion, datos);
   const posts = programacion && estrategia ? postsDelBorrador(programacion.borrador, estrategia, datos.piezas) : [];
-  const arrastrable = programacion !== null && sePuedeArrastrar;
+  const arrastrable = programacion !== null && sePuedeArrastrar && !guardandoPlan;
 
   function soltar(fecha: string) {
     if (!arrastre) return;
@@ -277,6 +279,8 @@ export function Calendario({
           <PanelProgramar
             programacion={programacion}
             datos={datos}
+            guardando={guardandoPlan}
+            iniciar={iniciarGuardadoPlan}
             alCambiar={(cambio) => setProgramacion((p) => (p ? cambio(p) : p))}
             alGuardar={() => setProgramacion(null)}
             alCancelar={() => setProgramacion(null)}

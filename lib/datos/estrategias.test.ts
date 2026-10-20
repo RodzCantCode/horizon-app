@@ -57,10 +57,10 @@ const filaE1 = {
   nombre: 'E1 · Anticipación fuerte',
   con_episodio: true,
   estrategia_piezas: [
-    { pieza_id: 'rp', desplazamiento: 0 },
-    { pieza_id: 'rc', desplazamiento: 5 },
-    { pieza_id: 't4', desplazamiento: -1 },
-    { pieza_id: 'rc', desplazamiento: 2 },
+    { id: 'i1', pieza_id: 'rp', desplazamiento: 0 },
+    { id: 'i2', pieza_id: 'rc', desplazamiento: 5 },
+    { id: 'i3', pieza_id: 't4', desplazamiento: -1 },
+    { id: 'i4', pieza_id: 'rc', desplazamiento: 2 },
   ],
 };
 
@@ -110,6 +110,33 @@ describe('leerEstrategiasYPiezas', () => {
       },
     ]);
     expect(consultas.get('estrategias')!.llamadas).toContainEqual(['order', 'nombre']);
+  });
+
+  it('dos piezas el mismo día salen siempre en el mismo orden, lleguen como lleguen', async () => {
+    // PostgREST no garantiza el orden de las filas anidadas, y crearPlan empareja las fechas del
+    // borrador con los ítems por posición: a igual día, manda el id de la fila de estrategia_piezas.
+    const mismoDia = [
+      { id: 'b', pieza_id: 'rc', desplazamiento: 1 },
+      { id: 'a', pieza_id: 'rp', desplazamiento: 1 },
+      { id: 'c', pieza_id: 't4', desplazamiento: 0 },
+    ];
+    const enOrden = { ...filaE1, estrategia_piezas: mismoDia };
+    const alReves = { ...filaE1, estrategia_piezas: [...mismoDia].reverse() };
+
+    const esperados = [
+      { piezaId: 't4', desplazamiento: 0 },
+      { piezaId: 'rp', desplazamiento: 1 },
+      { piezaId: 'rc', desplazamiento: 1 },
+    ];
+    preparar({ data: [], error: null }, { data: [enOrden], error: null });
+    expect((await leerEstrategiasYPiezas()).estrategias[0].items).toEqual(esperados);
+    preparar({ data: [], error: null }, { data: [alReves], error: null });
+    expect((await leerEstrategiasYPiezas()).estrategias[0].items).toEqual(esperados);
+    // El id hace falta en la consulta para poder ordenar por él.
+    expect(consultas.get('estrategias')!.llamadas).toContainEqual([
+      'select',
+      'id, nombre, con_episodio, estrategia_piezas(id, pieza_id, desplazamiento)',
+    ]);
   });
 
   it('si Supabase falla, lanza un error', async () => {
