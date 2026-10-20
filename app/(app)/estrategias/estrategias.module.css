@@ -57,7 +57,8 @@
   gap: 0.75rem;
 }
 
-/* Las estrategias, más anchas: en su mini fila caben siete días y los nombres se parten menos. */
+/* Las estrategias, en tarjetas más anchas que las piezas. Su mini fila (de 15 a 22 cuadrados) cabe
+   en cualquiera de las dos. */
 .rejilla[data-ancha] {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 28rem), 1fr));
 }
@@ -191,8 +192,9 @@
   gap: 0.75rem;
 }
 
-/* Los días de una estrategia, de D-1 a D+5: la posición a la izquierda y sus piezas a la derecha.
-   Al verla, solo los días con piezas; al editarla, los siete, con quitar y añadir. */
+/* Los días de una estrategia, de D-7 a D+14: la posición a la izquierda y sus piezas a la derecha.
+   Al verla, solo los días con piezas; al editarla, los de la mini fila (de D-2 a D+12, o más si los
+   usa) con quitar y añadir, y **Más días** para el resto. */
 .dias {
   list-style: none;
   margin: 0;
@@ -266,13 +268,18 @@
   color: var(--papel-tenue);
 }
 
-/* Un grupo de campos con título (las piezas por día, los canales, los días permitidos): el título
+/* Un grupo de campos con título (las piezas por día, los canales): el título
    con la misma letra que el de los RadioGroup de Mochi. */
 .grupoCampos {
   min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
+}
+
+/* **Más días**, debajo del último día al editar. */
+.masDias {
+  padding-top: 0.5rem;
 }
 
 .leyenda {

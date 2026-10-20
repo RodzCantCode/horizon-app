@@ -2,9 +2,8 @@
 
 import { useRef, useState, type FormEvent } from 'react';
 import { Button, Checkbox, PencilIcon, RadioGroup, TextField } from 'mochi-ui';
-import { NUEVA, preguntaArchivar, textoDias } from '@/lib/estrategias';
-import { DESPLAZAMIENTOS } from '@/lib/planes';
-import { posicionRespectoAD, textoCanales, textoFormato, textoPreparacion } from '@/lib/semanas';
+import { NUEVA, preguntaArchivar } from '@/lib/estrategias';
+import { textoCanales, textoFormato, textoPreparacion } from '@/lib/semanas';
 import { CANALES, FORMATOS, type Canal, type Formato, type Pieza } from '@/lib/tipos';
 import { BotonesGuardar, useEnvio } from '../componentes/edicion';
 import { Panel, useFocoAlCambiarDeVista, usePanelDeLaUrl } from '../componentes/Panel';
@@ -75,8 +74,6 @@ function VerPieza({ pieza, usadaEn, alEditar }: { pieza: Pieza; usadaEn: string[
           <dd>{textoFormato(pieza.formato)}</dd>
           <dt>Canales</dt>
           <dd>{textoCanales(pieza.canales)}</dd>
-          <dt>Días</dt>
-          <dd>{textoDias(pieza.diasPermitidos)}</dd>
           <dt>Preparación</dt>
           <dd>{textoPreparacion(pieza.diasPreparacion)}</dd>
           <dt>Hora habitual</dt>
@@ -178,9 +175,9 @@ function aNumero(texto: string): number {
 
 /**
  * La pieza en modo edición (o una nueva, con `pieza = null`, con los valores de partida del
- * prototipo: carrusel, Instagram, todos los días, dos de preparación y sin hora). La hora es texto
- * «hh:mm», como al editar una pieza de un plan: vacía es sin hora. El servidor lo vuelve a comprobar
- * todo y no deja quitar un día en el que una estrategia ya la tiene.
+ * prototipo: carrusel, Instagram, dos de preparación y sin hora). La hora es texto «hh:mm», como al
+ * editar una pieza de un plan: vacía es sin hora. Sin días permitidos: una pieza puede ir cualquier
+ * día de la estrategia. El servidor lo vuelve a comprobar todo.
  */
 function EditarPieza({
   pieza,
@@ -195,7 +192,6 @@ function EditarPieza({
   const [nombreCorto, setNombreCorto] = useState(pieza?.nombreCorto ?? '');
   const [formato, setFormato] = useState<Formato>(pieza?.formato ?? 'slide');
   const [canales, setCanales] = useState<Canal[]>(pieza?.canales ?? ['ig']);
-  const [dias, setDias] = useState<number[]>(pieza?.diasPermitidos ?? [...DESPLAZAMIENTOS]);
   const [preparacion, setPreparacion] = useState(String(pieza?.diasPreparacion ?? 2));
   const [hora, setHora] = useState(pieza?.horaHabitual ?? '');
   const { enviando, error, enviar } = useEnvio();
@@ -207,7 +203,6 @@ function EditarPieza({
       nombreCorto,
       formato,
       canales,
-      diasPermitidos: dias,
       diasPreparacion: aNumero(preparacion),
       horaHabitual: hora,
     };
@@ -234,13 +229,6 @@ function EditarPieza({
         opciones={CANALES.map((c) => ({ valor: c, etiqueta: textoCanales([c]) }))}
         elegidas={canales}
         alCambiar={setCanales}
-      />
-
-      <Casillas
-        leyenda="Días permitidos"
-        opciones={DESPLAZAMIENTOS.map((d) => ({ valor: d, etiqueta: posicionRespectoAD(d) }))}
-        elegidas={dias}
-        alCambiar={setDias}
       />
 
       <div className={panel.campos}>

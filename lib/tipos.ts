@@ -17,7 +17,11 @@ export type Pieza = {
   nombreCorto: string;
   formato: Formato;
   canales: Canal[];
-  /** Desplazamientos respecto al día D (D-1 = -1, D = 0, D+4 = 4) en los que puede ir. */
+  /**
+   * Desplazamientos respecto al día D (D-1 = -1, D = 0, D+4 = 4) en los que podía ir. Sin uso desde
+   * el rediseño del calendario (una pieza va cualquier día): la columna sigue en la base y se lee,
+   * pero ni se comprueba ni se enseña ni se edita.
+   */
   diasPermitidos: number[];
   /** Días antes de publicar a los que hay que empezar a prepararla. */
   diasPreparacion: number;

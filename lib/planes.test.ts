@@ -3,7 +3,6 @@ import {
   copiarPieza,
   desplazamientoDe,
   DESPLAZAMIENTOS_ESTRATEGIA,
-  diaPermitido,
   estrategiaDisponible,
   estrategiasParaPlanificar,
   generarPiezasDePlan,
@@ -324,18 +323,6 @@ describe('copiarPieza', () => {
     const copia = copiarPieza(original, '2026-10-16', 4);
     original.canales.push('shorts');
     expect(copia.canales).toEqual(['ig', 'tiktok']);
-  });
-});
-
-describe('diaPermitido', () => {
-  const t4 = pieza('t4');
-
-  it('acepta un desplazamiento de la lista de la pieza', () => {
-    expect(diaPermitido(t4, -1)).toBe(true);
-  });
-
-  it('rechaza uno que no está', () => {
-    expect(diaPermitido(t4, 2)).toBe(false);
   });
 });
 

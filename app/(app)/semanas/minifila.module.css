@@ -1,55 +1,31 @@
-/* La mini fila de días de una estrategia (MiniFila.tsx): siete huecos estrechos, de D-1 a D+5, con
-   una barra arriba (llena si el día tiene piezas) y debajo sus nombres cortos en la voz estrecha,
-   para que quepan siete en el panel de 375 px. Solo tokens de app/global.css. */
+/* La mini fila de días de una estrategia (MiniFila.tsx): un cuadrado de 8 px por día, con 3 px entre
+   ellos. Vacío, del color de las líneas; con piezas, azul; el de D (el episodio), en papel. Con
+   22 días como mucho (de D-7 a D+14) mide unos 240 px: cabe en el panel de 375 px. Solo tokens de
+   app/global.css. */
 
 .fila {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
 }
 
 .dia {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.dia::before {
-  content: '';
-  height: 4px;
+  position: relative;
+  flex: none;
+  width: 8px;
+  height: 8px;
   border-radius: 2px;
-  background: var(--papel-medio);
+  background: var(--linea);
 }
 
-.dia[data-vacio]::before {
-  background: var(--linea-fuerte);
+.dia[data-piezas] {
+  background: var(--azul-texto);
 }
 
-.posicion {
-  font-stretch: 75%;
-  font-weight: 600;
-  font-size: 0.6875rem;
-  line-height: 1.2;
-  letter-spacing: 0.04em;
-  color: var(--papel-tenue);
-}
-
-/* Una palabra larga («secundario») no cabe entera en el hueco: se parte con guion (el idioma lo da
-   <html lang="es">). */
-.pieza {
-  font-stretch: 75%;
-  font-size: 0.75rem;
-  line-height: 1.2;
-  color: var(--papel-medio);
-  overflow-wrap: break-word;
-  hyphens: auto;
-}
-
-/* Dos piezas el mismo día: algo más de aire entre ellas que entre las líneas de una. */
-.pieza + .pieza {
-  margin-top: 0.25rem;
+/* D va siempre marcado como el episodio, lleve piezas o no. */
+.dia[data-episodio] {
+  background: var(--papel);
 }

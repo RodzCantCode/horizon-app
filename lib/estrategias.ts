@@ -2,43 +2,21 @@
 // paneles, qué estrategias usan una pieza y qué piezas se pueden poner en un día de una estrategia.
 // Sin acceso a datos: recibe las estrategias y las piezas ya leídas (`lib/datos/estrategias.ts`).
 
-import { diaPermitido, estrategiaDisponible } from '@/lib/planes';
-import { posicionRespectoAD, textoCanales, textoFormato, textoPreparacion } from '@/lib/semanas';
+import { estrategiaDisponible } from '@/lib/planes';
+import { textoCanales, textoFormato, textoPreparacion } from '@/lib/semanas';
 import type { Estrategia, Pieza } from '@/lib/tipos';
 
 /** Lo que lleva la URL (`?estrategia=nueva`, `?pieza=nueva`) para abrir el panel de crear una. */
 export const NUEVA = 'nueva';
 
 /**
- * Los días en que puede ir una pieza, de D-1 a D+5. Tres o más seguidos van como un tramo:
- * «D-1 a D+5», «D+4, D+5», «D-1, D+1 a D+3, D+5».
- */
-export function textoDias(dias: number[]): string {
-  const ordenados = [...new Set(dias)].sort((a, b) => a - b);
-  const tramos: number[][] = [];
-  for (const dia of ordenados) {
-    const ultimo = tramos[tramos.length - 1];
-    if (ultimo && dia === ultimo[ultimo.length - 1] + 1) ultimo.push(dia);
-    else tramos.push([dia]);
-  }
-  return tramos
-    .flatMap((tramo) =>
-      tramo.length >= 3
-        ? [`${posicionRespectoAD(tramo[0])} a ${posicionRespectoAD(tramo[tramo.length - 1])}`]
-        : tramo.map(posicionRespectoAD),
-    )
-    .join(', ');
-}
-
-/**
- * La línea de una pieza en la lista: formato, canales, días, preparación y hora habitual.
- * «Carrusel · Instagram, TikTok · D+1 a D+4 · 3 días de preparación · sin hora».
+ * La línea de una pieza en la lista: formato, canales, preparación y hora habitual. Sin los días
+ * permitidos, que ya no se usan. «Carrusel · Instagram, TikTok · 3 días de preparación · sin hora».
  */
 export function resumenPieza(p: Pieza): string {
   return [
     textoFormato(p.formato),
     p.canales.map((c) => textoCanales([c])).join(', '),
-    textoDias(p.diasPermitidos),
     `${textoPreparacion(p.diasPreparacion)} de preparación`,
     p.horaHabitual ?? 'sin hora',
   ].join(' · ');
@@ -80,8 +58,8 @@ export function preguntaArchivar(cuantas: number): string {
 }
 
 /**
- * Las piezas que se pueden poner en ese día de una estrategia: las no archivadas que lo admiten y
- * que no están ya en él. En el orden en que llegan.
+ * Las piezas que se pueden poner en ese día de una estrategia: las no archivadas que no están ya en
+ * él (cualquier pieza puede ir cualquier día). En el orden en que llegan.
  */
 export function piezasParaAnadir(
   piezas: Pieza[],
@@ -91,7 +69,6 @@ export function piezasParaAnadir(
   return piezas.filter(
     (p) =>
       !p.archivada &&
-      diaPermitido(p, desplazamiento) &&
       !items.some((i) => i.piezaId === p.id && i.desplazamiento === desplazamiento),
   );
 }

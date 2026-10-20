@@ -47,22 +47,25 @@ describe('guardarEstrategia', () => {
     items: items(['t4', -1], ['rp', 0], ['rc', 2], ['t2', 4], ['rc', 5]),
   };
 
-  it('una pieza en un día que no admite no se guarda', async () => {
+  it('una pieza va en cualquier día: ya no se miran los días permitidos', async () => {
+    // Antes T4 solo admitía D-1; ahora va en D sin problema.
     tablas.set('piezas', filasPiezas({ t4: { dias_permitidos: [-1] } }));
 
-    expect(await guardarEstrategia({ ...e1, items: items(['t4', 0]) })).toEqual({
-      error: 'Esa pieza no puede ir ese día',
-    });
-    expect(escrituras).toEqual([]);
+    expect(await guardarEstrategia({ ...e1, items: items(['t4', 0]) })).toEqual({});
+    expect(itemsDe('e1')).toEqual([['t4', 0]]);
   });
 
-  it('un día fuera de D-1…D+5 tampoco', async () => {
-    expect(await guardarEstrategia({ ...e1, items: items(['t3', 6]) })).toEqual({
-      error: 'Esa pieza no puede ir ese día',
-    });
-    expect(await guardarEstrategia({ ...e1, items: items(['t3', -2]) })).toEqual({
-      error: 'Esa pieza no puede ir ese día',
-    });
+  it('de D-7 a D+14 se guarda, en los dos extremos', async () => {
+    expect(await guardarEstrategia({ ...e1, items: items(['t3', -7], ['rp', 0], ['rc', 14]) })).toEqual({});
+    expect(itemsDe('e1')).toEqual([['t3', -7], ['rp', 0], ['rc', 14]]);
+  });
+
+  it('un día fuera de D-7…D+14 no se guarda', async () => {
+    for (const dia of [-8, 15]) {
+      expect(await guardarEstrategia({ ...e1, items: items(['rp', 0], ['t3', dia]) })).toEqual({
+        error: 'El día tiene que estar entre D-7 y D+14',
+      });
+    }
     expect(escrituras).toEqual([]);
   });
 
@@ -186,13 +189,12 @@ describe('guardarEstrategia', () => {
 
 describe('guardarPieza', () => {
   // El clip principal del prototipo como lo manda el panel.
-  const clip: Omit<Pieza, 'archivada'> = {
+  const clip: Omit<Pieza, 'archivada' | 'diasPermitidos'> = {
     id: 'rp',
     nombre: 'Clip principal',
     nombreCorto: 'Clip principal',
     formato: 'reel',
     canales: ['ig', 'tiktok', 'shorts'],
-    diasPermitidos: [-1, 0, 1, 2, 3, 4, 5],
     diasPreparacion: 2,
     horaHabitual: '18:00',
   };
@@ -204,13 +206,14 @@ describe('guardarPieza', () => {
     expect(escrituras).toEqual([]);
   });
 
-  it('al editarla cambia sus datos en snake_case, sin tocar si está archivada', async () => {
+  it('al editarla cambia sus datos en snake_case, sin tocar si está archivada ni sus días permitidos', async () => {
+    // La columna dias_permitidos queda sin uso: se conserva lo que tuviera.
+    tablas.set('piezas', filasPiezas({ rp: { dias_permitidos: [0] } }));
     const cambios = {
       ...clip,
       nombre: ' Clip principal largo ',
       nombreCorto: 'Clip largo',
       canales: ['shorts', 'ig'] as Pieza['canales'],
-      diasPermitidos: [1, 0],
       diasPreparacion: 4,
       horaHabitual: '9:30',
     };
@@ -225,7 +228,6 @@ describe('guardarPieza', () => {
           nombre_corto: 'Clip largo',
           formato: 'reel',
           canales: ['ig', 'shorts'],
-          dias_permitidos: [0, 1],
           dias_preparacion: 4,
           hora_habitual: '09:30',
         },
@@ -233,6 +235,7 @@ describe('guardarPieza', () => {
       },
     ]);
     expect(filaDe('piezas', 'rp')).toHaveProperty('archivada', false);
+    expect(filaDe('piezas', 'rp')).toHaveProperty('dias_permitidos', [0]);
     expect(refresh).toHaveBeenCalledOnce();
   });
 
@@ -243,15 +246,15 @@ describe('guardarPieza', () => {
     expect(filaDe('piezas', 'rp')).toHaveProperty('hora_habitual', null);
   });
 
-  it('una nueva se crea sin archivar', async () => {
-    const nueva = { ...clip, id: undefined, nombre: 'Clip vertical', nombreCorto: 'Vertical', diasPermitidos: [2] };
+  it('una nueva se crea sin archivar y con los días permitidos que entiende el código publicado', async () => {
+    const nueva = { ...clip, id: undefined, nombre: 'Clip vertical', nombreCorto: 'Vertical' };
 
     expect(await guardarPieza(nueva)).toEqual({});
     expect(escrituras).toHaveLength(1);
     expect(escrituras[0]).toEqual(expect.objectContaining({ tabla: 'piezas', operacion: 'insert' }));
     expect(escrituras[0].valores).not.toHaveProperty('archivada');
     expect(tablas.get('piezas')!.find((p) => p.nombre === 'Clip vertical')).toEqual(
-      expect.objectContaining({ nombre_corto: 'Vertical', dias_permitidos: [2], hora_habitual: '18:00' }),
+      expect.objectContaining({ nombre_corto: 'Vertical', dias_permitidos: [-1, 0, 1, 2, 3, 4, 5], hora_habitual: '18:00' }),
     );
   });
 
@@ -261,15 +264,11 @@ describe('guardarPieza', () => {
     expect(escrituras).toEqual([]);
   });
 
-  it('el formato, los canales y los días tienen que ser de los que hay', async () => {
+  it('el formato y los canales tienen que ser de los que hay', async () => {
     expect(await guardarPieza({ ...clip, formato: 'story' as Pieza['formato'] })).toEqual({ error: 'Elige el formato' });
     expect(await guardarPieza({ ...clip, canales: [] })).toEqual({ error: 'Elige al menos un canal' });
     expect(await guardarPieza({ ...clip, canales: ['ig', 'x' as Pieza['canales'][number]] })).toEqual({
       error: 'Ese canal no es válido',
-    });
-    expect(await guardarPieza({ ...clip, diasPermitidos: [] })).toEqual({ error: 'Elige al menos un día' });
-    expect(await guardarPieza({ ...clip, diasPermitidos: [0, 6] })).toEqual({
-      error: 'Los días tienen que estar entre D-1 y D+5',
     });
     expect(escrituras).toEqual([]);
   });
@@ -283,15 +282,13 @@ describe('guardarPieza', () => {
     expect(await guardarPieza({ ...clip, diasPreparacion: 0 })).toEqual({});
   });
 
-  it('no deja quitar un día en el que una estrategia la usa', async () => {
-    // E1 lleva la historia del invitado en D-1.
+  it('ya no pide días ni mira en qué días la usan las estrategias', async () => {
+    // E1 lleva la historia del invitado en D-1; aunque no se pudiera leer estrategia_piezas, se guarda.
+    fallos.set('estrategia_piezas', { code: '42501', message: 'permission denied for table estrategia_piezas' });
     const t4 = { ...clip, id: 't4', nombre: 'T4 · Historia del invitado', nombreCorto: 'Historia del invitado' };
 
-    expect(await guardarPieza({ ...t4, diasPermitidos: [0] })).toEqual({
-      error: 'Una estrategia la usa en un día que quitas: cámbiala antes',
-    });
-    expect(escrituras).toEqual([]);
-    expect(await guardarPieza({ ...t4, diasPermitidos: [-1, 0] })).toEqual({});
+    expect(await guardarPieza(t4)).toEqual({});
+    expect(escrituras.map(({ tabla, operacion }) => [tabla, operacion])).toEqual([['piezas', 'update']]);
   });
 
   it('si la pieza ya no existe, lo dice y refresca', async () => {
@@ -370,7 +367,6 @@ describe('editar estrategias y piezas no toca los planes', () => {
         nombreCorto: 'Clip nuevo',
         formato: 'reel',
         canales: ['ig'],
-        diasPermitidos: [0],
         diasPreparacion: 1,
         horaHabitual: '20:00',
       }),

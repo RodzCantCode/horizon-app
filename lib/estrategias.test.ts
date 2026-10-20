@@ -5,7 +5,6 @@ import {
   piezasParaAnadir,
   preguntaArchivar,
   resumenPieza,
-  textoDias,
 } from '@/lib/estrategias';
 import type { Estrategia, Pieza } from '@/lib/tipos';
 
@@ -32,25 +31,11 @@ const e1 = estrategia('e1', 'E1 · Anticipación fuerte', true, [['t4', -1], ['r
 const e2 = estrategia('e2', 'E2 · Valor primero', true, [['rt', -1], ['rp', 0], ['t2', 1], ['t3', 4], ['rc', 5]]);
 const e3 = estrategia('e3', 'E3 · Recopilación', false, [['t3', -1], ['t1', 5]]);
 
-describe('textoDias', () => {
-  it('pone los días sueltos uno a uno, de D-1 a D+5', () => {
-    expect(textoDias([0])).toBe('D');
-    expect(textoDias([-1])).toBe('D-1');
-    expect(textoDias([5, 4])).toBe('D+4, D+5');
-  });
-
-  it('junta tres o más días seguidos en un tramo', () => {
-    expect(textoDias([-1, 0, 1, 2, 3, 4, 5])).toBe('D-1 a D+5');
-    expect(textoDias([1, 2, 3, 4])).toBe('D+1 a D+4');
-    expect(textoDias([-1, 1, 2, 3, 5])).toBe('D-1, D+1 a D+3, D+5');
-  });
-});
-
 describe('resumenPieza', () => {
-  it('formato, canales, días, preparación y hora en una línea', () => {
+  it('formato, canales, preparación y hora en una línea, sin los días permitidos', () => {
     const [, t2, , , rp] = piezasDePrueba();
-    expect(resumenPieza(t2)).toBe('Carrusel · Instagram, TikTok · D+1 a D+4 · 3 días de preparación · sin hora');
-    expect(resumenPieza(rp)).toBe('Reel · Instagram, TikTok, Shorts · D · 2 días de preparación · 18:00');
+    expect(resumenPieza(t2)).toBe('Carrusel · Instagram, TikTok · 3 días de preparación · sin hora');
+    expect(resumenPieza(rp)).toBe('Reel · Instagram, TikTok, Shorts · 2 días de preparación · 18:00');
   });
 });
 
@@ -94,11 +79,14 @@ describe('preguntaArchivar', () => {
 });
 
 describe('piezasParaAnadir', () => {
-  it('solo las no archivadas que admiten ese día y que no están ya en él', () => {
+  it('las no archivadas que no están ya en ese día, sin mirar los días permitidos', () => {
     const piezas = piezasDePrueba({ t3: { archivada: true } });
-    // D-1 admite T3 (archivada), T4 (ya está) y Teaser.
-    expect(piezasParaAnadir(piezas, e1.items, -1).map((p) => p.id)).toEqual(['rt']);
-    // D+4 admite T1, T2 (ya está), T3 (archivada) y el clip secundario.
-    expect(piezasParaAnadir(piezas, e1.items, 4).map((p) => p.id)).toEqual(['t1', 'rc']);
+    // En D-1 ya está T4 y T3 está archivada.
+    expect(piezasParaAnadir(piezas, e1.items, -1).map((p) => p.id)).toEqual(['t1', 't2', 'rp', 'rc', 'rt']);
+    // En D+4 ya está T2.
+    expect(piezasParaAnadir(piezas, e1.items, 4).map((p) => p.id)).toEqual(['t1', 't4', 'rp', 'rc', 'rt']);
+    // Y en los extremos de D-7 a D+14, todas las no archivadas.
+    expect(piezasParaAnadir(piezas, e1.items, -7).map((p) => p.id)).toEqual(['t1', 't2', 't4', 'rp', 'rc', 'rt']);
+    expect(piezasParaAnadir(piezas, e1.items, 14).map((p) => p.id)).toEqual(['t1', 't2', 't4', 'rp', 'rc', 'rt']);
   });
 });

@@ -3,7 +3,7 @@
 import { refresh } from 'next/cache';
 import { aPieza } from '@/lib/datos/estrategias';
 import { normalizarHora } from '@/lib/fechas';
-import { DESPLAZAMIENTOS, diaPermitido } from '@/lib/planes';
+import { DESPLAZAMIENTOS_ESTRATEGIA } from '@/lib/planes';
 import { crearClienteServidor } from '@/lib/supabase/servidor';
 import { CANALES, FORMATOS, type Estrategia, type Pieza } from '@/lib/tipos';
 
@@ -21,7 +21,7 @@ const NO_GUARDADO = 'No se ha podido guardar. Vuelve a intentarlo.';
 const FALTA_NOMBRE = 'Falta el nombre';
 const FALTA_NOMBRE_CORTO = 'Falta el nombre corto';
 const SIN_PIEZAS = 'Pon al menos una pieza';
-const DIA_NO_PERMITIDO = 'Esa pieza no puede ir ese día';
+const DIA_FUERA = 'El día tiene que estar entre D-7 y D+14';
 const PIEZA_REPETIDA = 'Esa pieza ya está en ese día';
 const PIEZA_ARCHIVADA = 'Esa pieza está archivada';
 const ESTRATEGIA_NO_EXISTE = 'Esa estrategia ya no existe';
@@ -29,16 +29,23 @@ const PIEZA_NO_EXISTE = 'Esa pieza ya no existe';
 const FORMATO_NO_VALIDO = 'Elige el formato';
 const SIN_CANALES = 'Elige al menos un canal';
 const CANAL_NO_VALIDO = 'Ese canal no es válido';
-const SIN_DIAS = 'Elige al menos un día';
-const DIAS_FUERA = 'Los días tienen que estar entre D-1 y D+5';
 const PREPARACION_NO_VALIDA = 'Los días de preparación tienen que ser un número entero, 0 o más';
 const HORA_NO_VALIDA = 'Esa hora no es válida';
-const DIA_EN_USO = 'Una estrategia la usa en un día que quitas: cámbiala antes';
+
+/**
+ * Los días permitidos con que se crea una pieza nueva. Desde el rediseño del calendario la app ya no
+ * los usa (una pieza puede ir cualquier día de D-7 a D+14), pero la columna `piezas.dias_permitidos`
+ * sigue en la base (`int[] not null`) y la comparte el código publicado en `main`, que todavía los
+ * comprueba de D-1 a D+5: con los siete, allí la pieza se puede poner en cualquier día y editar.
+ * Al editar una pieza no se tocan: se conserva lo que tuviera.
+ */
+const DIAS_PERMITIDOS_DE_UNA_NUEVA = [-1, 0, 1, 2, 3, 4, 5];
 
 /**
  * Crea una estrategia (sin `id`) o cambia una que ya existe: su nombre, si es para semanas con o
  * sin episodio y sus piezas en cada día. Hace falta nombre y al menos una pieza; cada pieza tiene
- * que existir, admitir su día (`diaPermitido`), de D-1 a D+5, y no repetirse en el mismo día.
+ * que existir, ir en un día de D-7 a D+14 (`DESPLAZAMIENTOS_ESTRATEGIA`) y no repetirse en el mismo
+ * día. Cualquier pieza puede ir en cualquiera de esos días.
  *
  * Una pieza archivada no se puede añadir: una nueva no puede llevar ninguna y, al editar, solo
  * pueden seguir las que la estrategia ya tenía (la estrategia sigue sin ofrecerse al planificar).
@@ -54,8 +61,8 @@ export async function guardarEstrategia(
   const nombre = e.nombre.trim();
   if (nombre === '') return { error: FALTA_NOMBRE };
   if (e.items.length === 0) return { error: SIN_PIEZAS };
-  if (e.items.some((item) => !DESPLAZAMIENTOS.includes(item.desplazamiento))) {
-    return { error: DIA_NO_PERMITIDO };
+  if (e.items.some((item) => !DESPLAZAMIENTOS_ESTRATEGIA.includes(item.desplazamiento))) {
+    return { error: DIA_FUERA };
   }
   const repetida = e.items.some((item, i) =>
     e.items.some((otro, j) => j < i && otro.piezaId === item.piezaId && otro.desplazamiento === item.desplazamiento),
@@ -91,7 +98,6 @@ export async function guardarEstrategia(
       refresh();
       return { error: PIEZA_ARCHIVADA };
     }
-    if (!diaPermitido(pieza, item.desplazamiento)) return { error: DIA_NO_PERMITIDO };
   }
 
   const fila = { nombre, con_episodio: e.conEpisodio };
@@ -138,15 +144,15 @@ function leerHora(texto: string | null): string | null | undefined {
 
 /**
  * Crea una pieza (sin `id`, sin archivar) o cambia los datos de una que ya existe, sin tocar si está
- * archivada (eso es `archivarPieza`). Hacen falta nombre y nombre corto, un formato, al menos un
- * canal y al menos un día de D-1 a D+5; los días de preparación, un entero desde 0; la hora
- * habitual, `HH:MM` o vacía (sin hora). Canales y días se guardan sin repetir y en orden.
+ * archivada (eso es `archivarPieza`). Hacen falta nombre y nombre corto, un formato y al menos un
+ * canal; los días de preparación, un entero desde 0; la hora habitual, `HH:MM` o vacía (sin hora).
+ * Los canales se guardan sin repetir y en orden.
  *
- * No deja quitar un día en el que alguna estrategia ya tiene la pieza: esa estrategia quedaría con
- * una pieza en un día que no admite.
+ * No pide días permitidos: ya no se usan. Una nueva se crea con `DIAS_PERMITIDOS_DE_UNA_NUEVA` y, al
+ * editar, `dias_permitidos` no se toca.
  */
 export async function guardarPieza(
-  p: Omit<Pieza, 'id' | 'archivada'> & { id?: string },
+  p: Omit<Pieza, 'id' | 'archivada' | 'diasPermitidos'> & { id?: string },
 ): Promise<{ error?: string }> {
   const nombre = p.nombre.trim();
   if (nombre === '') return { error: FALTA_NOMBRE };
@@ -155,8 +161,6 @@ export async function guardarPieza(
   if (!FORMATOS.includes(p.formato)) return { error: FORMATO_NO_VALIDO };
   if (p.canales.length === 0) return { error: SIN_CANALES };
   if (p.canales.some((c) => !CANALES.includes(c))) return { error: CANAL_NO_VALIDO };
-  if (p.diasPermitidos.length === 0) return { error: SIN_DIAS };
-  if (p.diasPermitidos.some((d) => !DESPLAZAMIENTOS.includes(d))) return { error: DIAS_FUERA };
   if (!Number.isInteger(p.diasPreparacion) || p.diasPreparacion < 0) return { error: PREPARACION_NO_VALIDA };
   const hora = leerHora(p.horaHabitual);
   if (hora === undefined) return { error: HORA_NO_VALIDA };
@@ -166,22 +170,17 @@ export async function guardarPieza(
     nombre_corto: nombreCorto,
     formato: p.formato,
     canales: CANALES.filter((c) => p.canales.includes(c)),
-    dias_permitidos: DESPLAZAMIENTOS.filter((d) => p.diasPermitidos.includes(d)),
     dias_preparacion: p.diasPreparacion,
     hora_habitual: hora,
   };
 
   const supabase = await crearClienteServidor();
   if (p.id === undefined) {
-    const { error } = await supabase.from('piezas').insert(fila);
+    const { error } = await supabase.from('piezas').insert({ ...fila, dias_permitidos: DIAS_PERMITIDOS_DE_UNA_NUEVA });
     if (error) return { error: NO_GUARDADO };
     refresh();
     return {};
   }
-
-  const usos = await supabase.from('estrategia_piezas').select('desplazamiento').eq('pieza_id', p.id);
-  if (usos.error) return { error: NO_GUARDADO };
-  if (usos.data.some((u) => !fila.dias_permitidos.includes(u.desplazamiento))) return { error: DIA_EN_USO };
 
   const { data, error } = await supabase.from('piezas').update(fila).eq('id', p.id).select('id');
   if (error) return { error: NO_GUARDADO };

@@ -143,11 +143,6 @@ export function moverPiezaDePlan(
   return { ...p, fecha, hora };
 }
 
-/** Si la pieza puede ir en ese desplazamiento respecto al día D. */
-export function diaPermitido(pieza: Pieza, desplazamiento: number): boolean {
-  return pieza.diasPermitidos.includes(desplazamiento);
-}
-
 /**
  * Número del próximo episodio: el mayor número de los planes con episodio más uno, con al menos dos
  * cifras («05» → «06», «99» → «100»). Ignora los planes sin episodio y los que no tienen número o lo

@@ -2,8 +2,9 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Button, CloseIcon, PencilIcon, RadioGroup, Select, TextField } from 'mochi-ui';
+import { rangoMiniFila } from '@/lib/calendario';
 import { motivoNoDisponible, NUEVA, piezasParaAnadir } from '@/lib/estrategias';
-import { DESPLAZAMIENTOS } from '@/lib/planes';
+import { DESPLAZAMIENTOS_ESTRATEGIA } from '@/lib/planes';
 import { posicionRespectoAD } from '@/lib/semanas';
 import type { Estrategia, Pieza } from '@/lib/tipos';
 import { BotonesGuardar, useEnvio } from '../componentes/edicion';
@@ -15,7 +16,7 @@ import estilos from './estrategias.module.css';
 /**
  * El panel de una estrategia (docs/diseno.md § Estrategias), en `?estrategia=<id>`: para qué semanas
  * es (con o sin episodio), por qué no se ofrece al planificar si usa piezas archivadas, y sus piezas
- * día a día, de D-1 a D+5. Con el lápiz, modo edición: nombre, tipo y las piezas de cada día, con
+ * día a día, de D-7 a D+14. Con el lápiz, modo edición: nombre, tipo y las piezas de cada día, con
  * **Guardar** y **Cancelar**. Con `?estrategia=nueva` se abre ya en edición y vacía, para crear una;
  * al guardarla o al cancelar, se cierra.
  *
@@ -97,7 +98,7 @@ function VerEstrategia({
           Piezas
         </h3>
         <ol className={estilos.dias}>
-          {DESPLAZAMIENTOS.map((desplazamiento) => {
+          {DESPLAZAMIENTOS_ESTRATEGIA.map((desplazamiento) => {
             const delDia = estrategia.items.filter((i) => i.desplazamiento === desplazamiento);
             if (delDia.length === 0) return null;
             return (
@@ -136,9 +137,13 @@ type ItemEnEdicion = Estrategia['items'][number] & { clave: number };
 
 /**
  * La estrategia en modo edición (o una nueva, con `estrategia = null`): nombre, tipo y, por cada
- * día de D-1 a D+5, sus piezas, cada una con su botón de quitar, y un desplegable para añadir otra.
- * Solo se ofrecen las no archivadas que admiten ese día y no están ya en él (`piezasParaAnadir`);
- * una archivada que ya tenía se ve marcada y se puede quitar. El servidor lo vuelve a comprobar todo.
+ * día, sus piezas, cada una con su botón de quitar, y un desplegable para añadir otra. Se ofrecen
+ * las no archivadas que no están ya en ese día (`piezasParaAnadir`); una archivada que ya tenía se
+ * ve marcada y se puede quitar. El servidor lo vuelve a comprobar todo.
+ *
+ * Los días van de D-7 a D+14, pero no se enseñan los 22 de entrada: solo los de la mini fila
+ * (`rangoMiniFila`: de D-2 a D+12, más los que la estrategia ya usa fuera de ahí) y **Más días**
+ * despliega el resto. El tramo se calcula al abrir y no encoge al quitar piezas.
  */
 function EditarEstrategia({
   estrategia,
@@ -159,26 +164,42 @@ function EditarEstrategia({
   const siguienteClave = useRef(estrategia?.items.length ?? 0);
   const { enviando, error, enviar } = useEnvio();
 
+  const [rango] = useState(() =>
+    rangoMiniFila({ id: '', nombre: '', conEpisodio: true, items: estrategia?.items ?? [] }),
+  );
+  const [todosLosDias, setTodosLosDias] = useState(false);
+  const enRango = (d: number) => d >= rango.desde && d <= rango.hasta;
+  const dias = todosLosDias ? DESPLAZAMIENTOS_ESTRATEGIA : DESPLAZAMIENTOS_ESTRATEGIA.filter(enRango);
+
   // Al quitar una pieza, su botón desaparece: el foco pasa a lo primero que quede en ese día (otra
-  // pieza o el desplegable de añadir).
+  // pieza o el desplegable de añadir). Con **Más días** pasa lo mismo con el botón: el foco va al
+  // primer día nuevo de después (D+13) o, si no hay, al último de antes (D-3), y ahí sí se desplaza
+  // hasta él.
   const lista = useRef<HTMLOListElement>(null);
-  const focoEnDia = useRef<number | null>(null);
+  const focoEnDia = useRef<{ dia: number; desplazar: boolean } | null>(null);
   useEffect(() => {
-    const dia = focoEnDia.current;
-    if (dia === null) return;
+    const foco = focoEnDia.current;
+    if (foco === null) return;
     focoEnDia.current = null;
     lista.current
-      ?.querySelector(`[data-dia="${dia}"]`)
+      ?.querySelector(`[data-dia="${foco.dia}"]`)
       ?.querySelector<HTMLElement>('button:not([tabindex="-1"]), select:not([tabindex="-1"])')
-      ?.focus({ preventScroll: true });
+      ?.focus({ preventScroll: !foco.desplazar });
   });
+
+  function mostrarTodosLosDias() {
+    const nuevos = DESPLAZAMIENTOS_ESTRATEGIA.filter((d) => !enRango(d));
+    const dia = nuevos.find((d) => d > rango.hasta) ?? nuevos[nuevos.length - 1];
+    if (dia !== undefined) focoEnDia.current = { dia, desplazar: true };
+    setTodosLosDias(true);
+  }
 
   function anadir(piezaId: string, desplazamiento: number) {
     setItems([...items, { piezaId, desplazamiento, clave: siguienteClave.current++ }]);
   }
 
   function quitar(clave: number, desplazamiento: number) {
-    focoEnDia.current = desplazamiento;
+    focoEnDia.current = { dia: desplazamiento, desplazar: false };
     setItems(items.filter((i) => i.clave !== clave));
   }
 
@@ -212,7 +233,7 @@ function EditarEstrategia({
       <fieldset className={estilos.grupoCampos}>
         <legend className={estilos.leyenda}>Piezas</legend>
         <ol ref={lista} className={estilos.dias}>
-          {DESPLAZAMIENTOS.map((desplazamiento) => {
+          {dias.map((desplazamiento) => {
             const posicion = posicionRespectoAD(desplazamiento);
             const delDia = items.filter((i) => i.desplazamiento === desplazamiento);
             const anadibles = piezasParaAnadir(piezas, items, desplazamiento);
@@ -256,6 +277,13 @@ function EditarEstrategia({
             );
           })}
         </ol>
+        {dias.length < DESPLAZAMIENTOS_ESTRATEGIA.length && (
+          <div className={estilos.masDias}>
+            <Button variant="surface" size="sm" onClick={mostrarTodosLosDias}>
+              Más días
+            </Button>
+          </div>
+        )}
       </fieldset>
 
       <BotonesGuardar guardando={enviando} error={error} alCancelar={alCancelar} />
