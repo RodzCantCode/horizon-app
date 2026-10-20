@@ -96,15 +96,14 @@ Supabase está en [docs/acceso.md](docs/acceso.md). Falta:
 
 1. Invitar a Izan y Lluís ([docs/acceso.md § Pasos](docs/acceso.md#b-invitar-a-alguien)) y que
    pongan su nombre en Ajustes.
-2. El resto de la Tarea 12: revisar la app en el móvil y «Cambiar contraseña» con sesión, la revisión
-   del diff y decidir si se quita el plan de prueba de la semana del 26-oct.
+2. El resto de la Tarea 12: revisar la app en el móvil (también el Calendario) y «Cambiar
+   contraseña» con sesión. Los planes de prueba se quitaron el 20-oct-2026.
 3. Antes de usarla con datos reales, una copia periódica de los datos fuera de Supabase (el plan
    gratuito no da copias que Mario pueda restaurar).
 
 **20-oct-2026: rediseño en curso** ([docs/rediseno-calendario.md](docs/rediseno-calendario.md)). La
 fase 1 (Calendario con programar y arrastre, hora del episodio, estrategias de D-7 a D+14) está
-construida en `preview` y descrita en [docs/diseno.md](docs/diseno.md); aún no está en producción
-(falta el OK de Mario). Quedan la fase 2 (piezas y estrategias con nombres claros) y la 3 (nuevo
+publicada en producción el 20-oct-2026 y descrita en [docs/diseno.md](docs/diseno.md). Quedan la fase 2 (piezas y estrategias con nombres claros) y la 3 (nuevo
 Inicio). La migración de la fase 1 ya está aplicada en la base, que comparten `preview` y producción.
 
 Supabase: proyecto «Horizon Sport - App» (organización «Horizon Sport», plan gratuito, Europa);

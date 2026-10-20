@@ -56,13 +56,13 @@ arrastrable, y ver juntos los posts de varios episodios) están hechos en la fas
 
 1. **Calendario** (hecha): la base de datos y la pantalla de programar.
 2. **Piezas y estrategias**: nombres claros y las estrategias reales (4 con episodio y 2 sin).
-3. **Inicio**: se diseña con Mario ahora que la fase 1 está en `preview`.
+3. **Inicio**: se diseña con Mario ahora que la fase 1 está publicada.
 
 Cada fase se construye en `preview` y se publica cuando Mario la da por buena.
 
 ## Fase 1: Calendario (construida el 2026-10-20)
 
-Hecha en `preview`, aún no en producción. Lo vigente (Calendario, programar, arrastre, hora del
+Publicada en producción el 2026-10-20. Lo vigente (Calendario, programar, arrastre, hora del
 episodio, estrategias de D-7 a D+14, datos) está en [diseno.md](diseno.md); el plan por tareas con
 que se construyó, en [plan-calendario.md](plan-calendario.md).
 
@@ -80,4 +80,4 @@ que se construyó, en [plan-calendario.md](plan-calendario.md).
 
 Tiene que responder, sin pensar, a las tres preguntas de la app: qué sale hoy y estos días (con
 hora), qué falta por programar en Metricool y qué semana viene sin plan. Se diseña con Mario cuando
-el calendario esté en `preview` (ya lo está).
+el calendario esté publicado (ya lo está).

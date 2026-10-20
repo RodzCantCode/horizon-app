@@ -3,7 +3,7 @@
 > **Actualizado:** 2026-10-20. Diseño acordado con Mario en sesión antes de construir las pantallas,
 > con lo que se ajustó al construirlas (rama `app-v1`), tras publicarla (navegación lateral, Inicio
 > y paneles en ventana centrada) y con la fase 1 del rediseño (Calendario y programar con arrastre,
-> construida en `preview`, aún no en producción; lo que queda del rediseño está en
+> publicada el 2026-10-20; lo que queda del rediseño está en
 > [rediseno-calendario.md](rediseno-calendario.md)).
 > Maqueta de la pantalla principal (anterior al Calendario): https://claude.ai/artifact/TScsm8f4QkSyBozqYzoNRv (privada).
 > El prototipo (`prototipo/index.html`) es referencia del modelo, no de la interfaz.
