@@ -1,5 +1,8 @@
 # Plan de construcción: calendario (fase 1 del rediseño)
 
+> **Estado:** ejecutado el 2026-10-20 en `preview`. Las casillas no se marcaron: el registro de lo
+> hecho es el historial de git. Lo vigente está en [diseno.md](diseno.md).
+
 > **Para agentes:** sub-skill obligatoria: superpowers:subagent-driven-development (recomendada) o
 > superpowers:executing-plans para ejecutar este plan tarea a tarea. Los pasos usan casillas
 > (`- [ ]`).

@@ -172,6 +172,7 @@ publicable; las dos son públicas por diseño). `.env.local` no se sube. La clav
 | `supabase/migrations/` | Las migraciones aplicadas, con la versión que registró `apply_migration` |
 | `supabase/pruebas/` | Pruebas de la base en SQL: `seguridad.sql` (RLS y registro) y `funciones.sql` (`crear_plan`, `mover_plan`, `mover_episodio`, `cambiar_estrategia`) |
 | `docs/plan-construccion.md` | El plan por tareas con que se construyó, y lo que queda (Tarea 12) |
+| `docs/plan-calendario.md` | El plan por tareas con que se construyó la fase 1 del rediseño (Calendario), ya ejecutado |
 | `docs/acceso.md` | Cómo invitar, cómo mandar una recuperación, qué hay configurado en Supabase y la operación de Vercel, Cloudflare y Resend |
 | `prototipo/index.html` | Prototipo de octubre: referencia del modelo, no de la interfaz. No se sirve |
 | `AGENTS.md` | Lo escribe `next dev`: avisa a los agentes de que lean la documentación de Next que viene en `node_modules/next/dist/docs/`. No se edita a mano |
