@@ -14,6 +14,7 @@ import {
   anadirPiezaSuelta,
   cambiarEstrategiaDePlan,
   editarEpisodio,
+  moverEpisodio,
   moverSemana,
 } from './acciones';
 import { MarcaEstado } from './MarcaEstado';
@@ -30,7 +31,7 @@ export type DatosDeSemana = {
   piezas: Pieza[];
 };
 
-type Vista = 'ver' | 'editar' | 'mover' | 'estrategia' | 'anadir';
+type Vista = 'ver' | 'editar' | 'mover' | 'episodio' | 'estrategia' | 'anadir';
 
 /**
  * El panel de una semana con plan (docs/diseno.md § Paneles de detalle): los datos del episodio, la
@@ -39,9 +40,10 @@ type Vista = 'ver' | 'editar' | 'mover' | 'estrategia' | 'anadir';
  * tiene plan (otra persona lo ha movido o borrado), llega `datos = null` y el panel lo dice.
  *
  * Con el lápiz, modo edición: los datos del episodio con **Guardar** y **Cancelar** y, aparte,
- * **Mover la semana**, **Cambiar la estrategia** y **Añadir una pieza suelta**, cada uno en su propia
- * vista con su **Guardar** y su **Cancelar**. Al terminar se vuelve a ver la semana; si se ha movido
- * a otra semana, el panel se cierra (ya no es esta) y el foco va al encabezado de la nueva.
+ * **Mover la semana**, **Mover solo el episodio**, **Cambiar la estrategia** y **Añadir una pieza
+ * suelta**, cada uno en su propia vista con su **Guardar** y su **Cancelar**. Al terminar se vuelve
+ * a ver la semana; si se ha movido a otra semana, el panel se cierra (ya no es esta) y el foco va al
+ * encabezado de la nueva.
  *
  * Se abre y se cierra como el de una pieza (PanelPieza.tsx): abierto mientras la URL lleve su
  * lunes, se cierra quitándolo con history.pushState y, al cerrarse, el foco vuelve a su encabezado.
@@ -122,8 +124,9 @@ function ContenidoSemana({
         <DatosSemana datos={datos} hoy={hoy} aviso={aviso} alEditar={() => setVista('editar')} />
       )}
       {vista === 'editar' && <EditarSemana plan={datos.plan} alElegir={setVista} alTerminar={volver} />}
-      {vista === 'mover' && (
-        <MoverSemana
+      {(vista === 'mover' || vista === 'episodio') && (
+        <MoverPlan
+          que={vista === 'mover' ? 'semana' : 'episodio'}
           lunes={lunes}
           plan={datos.plan}
           hoy={hoy}
@@ -226,7 +229,7 @@ function DatosSemana({
 
 /**
  * El modo edición de la semana: con episodio, su número, invitado, tema y hora con **Guardar** y
- * **Cancelar** (gana el último que guarda, sin aviso de desfase); debajo, para todas, los otros tres
+ * **Cancelar** (gana el último que guarda, sin aviso de desfase); debajo, para todas, los otros
  * cambios, cada uno en su vista.
  */
 function EditarSemana({
@@ -281,6 +284,9 @@ function EditarSemana({
         <Button variant="surface" onClick={() => alElegir('mover')}>
           Mover la semana
         </Button>
+        <Button variant="surface" onClick={() => alElegir('episodio')}>
+          {plan.conEpisodio ? 'Mover solo el episodio' : 'Mover solo el día de referencia'}
+        </Button>
         <Button variant="surface" onClick={() => alElegir('estrategia')}>
           Cambiar la estrategia
         </Button>
@@ -298,18 +304,28 @@ function EditarSemana({
 }
 
 /**
- * **Mover la semana**: un día D nuevo, cualquiera. Todas las piezas se mueven los mismos días y las
- * programadas quedan para revisar en Metricool (lo hace la base). Si cae en otra semana, se dice
- * antes de guardar y, al guardar, el plan pasa a esa semana y el panel se cierra; si esa semana ya
- * tiene plan, el servidor lo dice y no cambia nada.
+ * Las dos formas de mover un plan sin arrastrar (docs/diseno.md § Calendario), las dos con un día D
+ * nuevo, cualquiera:
+ *
+ * - **Mover la semana** (`que = 'semana'`, `moverSemana`): todos los posts se mueven los mismos días
+ *   y los programados quedan para revisar en Metricool (lo hace la base).
+ * - **Mover solo el episodio** (`que = 'episodio'`, `moverEpisodio`, lo mismo que arrastrar el
+ *   episodio en el Calendario): los posts se quedan en su fecha y hora, con su estado. Sin episodio,
+ *   mueve el día de referencia.
+ *
+ * Una nota bajo el campo dice cuál de las dos es. Si el nuevo D cae en otra semana, se dice antes de
+ * guardar y, al guardar, el plan pasa a esa semana y el panel se cierra; si esa semana ya tiene plan,
+ * o el plan ya no existe, el servidor lo dice bajo los botones y no cambia nada.
  */
-function MoverSemana({
+function MoverPlan({
+  que,
   lunes,
   plan,
   hoy,
   alTerminar,
   alMoverAOtraSemana,
 }: {
+  que: 'semana' | 'episodio';
   lunes: string;
   plan: Plan;
   hoy: string;
@@ -319,11 +335,17 @@ function MoverSemana({
   const [diaD, setDiaD] = useState(plan.diaD);
   const { enviando, error, enviar } = useEnvio();
   const nuevoLunes = esFecha(diaD) ? lunesDe(diaD) : lunes;
+  const accion = que === 'semana' ? moverSemana : moverEpisodio;
+  const dia = plan.conEpisodio ? 'el episodio' : 'el día de referencia';
+  const nota =
+    que === 'semana'
+      ? `Se mueven ${dia} y todos los posts los mismos días. Los ya programados quedan para revisar en Metricool.`
+      : `Solo se mueve ${dia}: los posts se quedan en su fecha y hora, con su estado.`;
 
   function guardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const siVaBien = nuevoLunes === lunes ? alTerminar : () => alMoverAOtraSemana(nuevoLunes);
-    enviar(() => moverSemana(plan.id, diaD), siVaBien);
+    enviar(() => accion(plan.id, diaD), siVaBien);
   }
 
   return (
@@ -337,6 +359,7 @@ function MoverSemana({
         />
         {nuevoLunes !== lunes && <p className={estilos.notaCampo}>{pasaALaSemana(nuevoLunes, hoy)}</p>}
       </div>
+      <p className={estilos.notaCampo}>{nota}</p>
       <BotonesGuardar guardando={enviando} error={error} alCancelar={alTerminar} />
     </form>
   );

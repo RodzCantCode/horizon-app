@@ -65,11 +65,14 @@ y no se arrastra (el corte es el de las columnas, no el de 768 px del móvil).
     D pasa a otra) y los posts no cambian de fecha ni de estado; solo se recalcula su posición
     respecto al nuevo D. Si esa semana ya tiene plan, «Esa semana ya tiene plan» y no cambia nada.
     Decidido por Mario (20-oct-2026): nada se mueve solo mientras siguen probando. Mover la semana
-    entera con sus posts se hace desde la ventana de la semana.
+    entera con sus posts, o solo el episodio sin arrastrar, se hace desde la ventana de la semana.
   - Un error al guardar sale en un aviso (Toast de Mochi) y la tarjeta vuelve a su sitio.
   - Las tarjetas guardadas no se arrastran por su cuenta (`draggable=false` donde no son origen
     de arrastre), para que soltarlas en un campo no escriba su dirección.
-- **Sin arrastre** (móvil o teclado), la ventana del post es el camino: eligiendo otra fecha.
+- **Sin arrastre** (por debajo de 1024 px, en el móvil o con el teclado): un post se mueve desde su
+  ventana, eligiendo otra fecha; el episodio, desde la ventana de la semana, con **Mover solo el
+  episodio** (lo mismo que arrastrarlo: los posts no se mueven) o **Mover la semana** (el episodio y
+  todos sus posts los mismos días). Sin episodio, **Mover solo el día de referencia**.
 - Solo se avisa en Inicio de la **semana siguiente** sin plan. Programar más lejos se puede, no se
   exige.
 
@@ -114,9 +117,11 @@ se arrastra, ver arriba).
 - **Semana** (al pulsar su encabezado en Inicio, o la tarjeta de su episodio en Calendario): datos del
   episodio (con su día y hora), estrategia usada y sus piezas. Con el lápiz: editar los datos del
   episodio (el número es obligatorio; la hora, editable aquí), añadir una pieza suelta, cambiar la
-  estrategia (regenera las piezas y avisa si alguna estaba programada) y mover la semana entera
-  (el día D nuevo, cualquiera; si cae en otra semana, el plan pasa a ella, y si esa ya tiene plan,
-  no se mueve).
+  estrategia (regenera las piezas y avisa si alguna estaba programada), **Mover la semana** (todos
+  los posts se mueven los mismos días y los programados quedan para revisar) y **Mover solo el
+  episodio** (o el día de referencia, sin episodio: los posts se quedan en su fecha y hora, con su
+  estado). Para mover, un día D nuevo, cualquiera; una nota bajo el campo dice qué se mueve. Si cae
+  en otra semana, el plan pasa a ella, y si esa ya tiene plan, no se mueve.
 - El modo edición termina con **Guardar** o **Cancelar**. Los cambios afectan solo a ese plan, nunca
   a la estrategia ni a la pieza de origen.
 - **Panel desfasado.** Al cambiar el día o la hora de una pieza, o al añadir una pieza suelta, no se

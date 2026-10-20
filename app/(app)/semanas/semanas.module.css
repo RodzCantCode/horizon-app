@@ -372,7 +372,7 @@
   gap: 0.75rem;
 }
 
-/* Bajo el día al mover la semana: a qué semana pasa el plan. */
+/* Bajo el día al mover la semana o solo el episodio: a qué semana pasa el plan y qué se mueve. */
 .notaCampo {
   font-size: 0.875rem;
   line-height: 1.4;
