@@ -243,7 +243,8 @@ function EditarSemana({
 
   function guardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
-    enviar(() => editarEpisodio(plan.id, { numero, invitado, tema }), alTerminar);
+    // La hora del episodio aún no se edita aquí: se guarda la que tiene.
+    enviar(() => editarEpisodio(plan.id, { numero, invitado, tema, hora: plan.horaEpisodio }), alTerminar);
   }
 
   return (
@@ -286,8 +287,8 @@ function EditarSemana({
 }
 
 /**
- * **Mover la semana**: un día D nuevo dentro de las semanas que se ven en la portada (el servidor
- * también lo comprueba). Todas las piezas se mueven los mismos días y las programadas quedan para
+ * **Mover la semana**: un día D nuevo dentro de las semanas que se ven en la portada (solo lo limita
+ * este panel; el servidor ya no). Todas las piezas se mueven los mismos días y las programadas quedan para
  * revisar en Metricool (lo hace la base). Si cae en otra semana, se dice antes de guardar y, al
  * guardar, el plan pasa a esa semana y el panel se cierra; si esa semana ya tiene plan, el servidor
  * lo dice y no cambia nada.

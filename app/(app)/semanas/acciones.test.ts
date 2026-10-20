@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   antesDeEscribir,
   escrituras,
@@ -18,6 +18,7 @@ import {
   editarEpisodio,
   editarPiezaDePlan,
   marcarEstado,
+  moverEpisodio,
   moverSemana,
   quitarPiezaDePlan,
 } from './acciones';
@@ -119,9 +120,9 @@ describe('marcarEstado', () => {
 });
 
 describe('crearPlan', () => {
-  // Semana del lunes 19 de octubre de 2026, episodio el viernes 23 con la estrategia E1.
+  // Semana del lunes 19 de octubre de 2026, episodio el viernes 23 con la estrategia E1. El lunes no
+  // lo manda el navegador: sale del día D.
   const entrada = {
-    lunes: '2026-10-19',
     conEpisodio: true,
     diaD: '2026-10-23',
     numero: '06',
@@ -139,14 +140,57 @@ describe('crearPlan', () => {
     expect(refresh).toHaveBeenCalledOnce();
   });
 
-  it('un día de publicación fuera de esa semana no llega a la base', async () => {
-    for (const diaD of ['2026-10-26', '2026-10-18', '2026-10-32', '']) {
-      expect(await crearPlan({ ...entrada, diaD })).toEqual({
-        error: 'El día de publicación tiene que caer en esa semana',
-      });
+  it('un día de publicación que no es una fecha no llega a la base', async () => {
+    for (const diaD of ['2026-10-32', '2026-02-30', '23/10/2026', '']) {
+      expect(await crearPlan({ ...entrada, diaD })).toEqual({ error: 'Esa fecha no es válida' });
     }
     expect(llamadasRpc).toEqual([]);
     expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('el lunes del plan sale del día D, aunque el navegador mande otro', async () => {
+    // D el domingo 25: su semana es la del lunes 19, no la del 26 que manda el navegador.
+    const conOtroLunes = { ...entrada, diaD: '2026-10-25', lunes: '2026-10-26' };
+    expect(await crearPlan(conOtroLunes)).toEqual({});
+    expect(llamadasRpc[0][1].plan).toEqual(expect.objectContaining({ lunes: '2026-10-19', dia_d: '2026-10-25' }));
+  });
+
+  it('con fechas, cada pieza va en la suya (también lejos de D) y se guarda la hora del episodio', async () => {
+    // Una fecha por ítem de E1, en su orden (t4, rp, rc, t2, rc); null deja la de la estrategia.
+    const fechas = ['2026-10-13', null, '2026-11-12', null, '2026-10-24'];
+    expect(await crearPlan({ ...entrada, fechas, horaEpisodio: '9:30' })).toEqual({});
+
+    expect(llamadasRpc[0][1].plan).toEqual(expect.objectContaining({ lunes: '2026-10-19', hora_episodio: '09:30' }));
+    expect(piezasEnviadas().map((p) => [p.pieza_id, p.fecha, p.desplazamiento])).toEqual([
+      ['t4', '2026-10-13', -10],
+      ['rp', '2026-10-23', 0],
+      ['rc', '2026-10-24', 1],
+      ['t2', '2026-10-27', 4],
+      ['rc', '2026-11-12', 20],
+    ]);
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('una fecha de pieza que no es una fecha no llega a la base', async () => {
+    for (const fecha of ['2026-02-30', '', '13/10/2026']) {
+      const fechas = ['2026-10-22', fecha, null, null, null];
+      expect(await crearPlan({ ...entrada, fechas })).toEqual({ error: 'Esa fecha no es válida' });
+    }
+    expect(llamadasRpc).toEqual([]);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('una hora del episodio que no es una hora no llega a la base', async () => {
+    expect(await crearPlan({ ...entrada, horaEpisodio: '25:00' })).toEqual({ error: 'Esa hora no es válida' });
+    expect(llamadasRpc).toEqual([]);
+  });
+
+  it('con fechas, si esa semana ya tiene plan, lo dice y refresca', async () => {
+    rpc.respuesta = { data: null, error: { code: 'P0001', message: 'semana_con_plan' } };
+
+    const fechas = ['2026-10-21', null, null, null, null];
+    expect(await crearPlan({ ...entrada, fechas, horaEpisodio: '19:00' })).toEqual({ error: 'Esa semana ya tiene plan' });
+    expect(refresh).toHaveBeenCalledOnce();
   });
 
   it('crea el plan con las piezas que genera el servidor, en snake_case', async () => {
@@ -220,13 +264,6 @@ describe('crearPlan', () => {
     expect(llamadasRpc).toEqual([]);
   });
 
-  it('la semana tiene que empezar en un lunes de verdad', async () => {
-    for (const lunes of ['2026-10-20', '2026-02-30', 'no-es-fecha']) {
-      expect(await crearPlan({ ...entrada, lunes })).toEqual({ error: 'Esa semana no es válida' });
-    }
-    expect(llamadasRpc).toEqual([]);
-  });
-
   it('con episodio hace falta el número', async () => {
     for (const numero of [null, '', '   ']) {
       expect(await crearPlan({ ...entrada, numero })).toEqual({ error: 'Falta el número del episodio' });
@@ -234,8 +271,15 @@ describe('crearPlan', () => {
     expect(llamadasRpc).toEqual([]);
   });
 
-  it('sin episodio no se guardan número, invitado ni tema', async () => {
-    const sinEpisodio = { ...entrada, conEpisodio: false, estrategiaId: 'e3', numero: '06', tema: 'Tema' };
+  it('sin episodio no se guardan número, invitado, tema ni hora del episodio', async () => {
+    const sinEpisodio = {
+      ...entrada,
+      conEpisodio: false,
+      estrategiaId: 'e3',
+      numero: '06',
+      tema: 'Tema',
+      horaEpisodio: '19:00',
+    };
     expect(await crearPlan(sinEpisodio)).toEqual({});
 
     expect(llamadasRpc[0][1].plan).toEqual({
@@ -299,19 +343,36 @@ describe('editarPiezaDePlan', () => {
     expect(filaDe('plan_piezas', CLIP)).toEqual(expect.objectContaining({ estado: 'programada', revisar: false }));
   });
 
-  it('un día fuera de D-1…D+5 no se guarda', async () => {
+  it('se puede llevar a cualquier día: a D+20 y a D-10 guarda desplazamiento 20 y -10', async () => {
+    tablas.set('plan_piezas', [filaPiezaDePlan()]);
+    expect(await editarPiezaDePlan(CLIP, '2026-11-12', '18:00', ORIGINAL)).toEqual({});
+    expect(filaDe('plan_piezas', CLIP)).toEqual(expect.objectContaining({ fecha: '2026-11-12', desplazamiento: 20 }));
+
+    tablas.set('plan_piezas', [filaPiezaDePlan()]);
+    expect(await editarPiezaDePlan(CLIP, '2026-10-13', '18:00', ORIGINAL)).toEqual({});
+    expect(filaDe('plan_piezas', CLIP)).toEqual(expect.objectContaining({ fecha: '2026-10-13', desplazamiento: -10 }));
+  });
+
+  it('una fecha que no existe no se guarda', async () => {
     tablas.set('plan_piezas', [filaPiezaDePlan()]);
 
-    for (const fecha of ['2026-10-21', '2026-10-29', '2026-02-30', '']) {
-      expect(await editarPiezaDePlan(CLIP, fecha, '18:00', ORIGINAL)).toEqual({
-        error: 'El día tiene que estar entre D-1 y D+5',
-      });
+    for (const fecha of ['2026-02-30', '24/10/2026', '']) {
+      expect(await editarPiezaDePlan(CLIP, fecha, '18:00', ORIGINAL)).toEqual({ error: 'Esa fecha no es válida' });
     }
     expect(escrituras).toEqual([]);
     expect(filaDe('plan_piezas', CLIP)).toEqual(filaPiezaDePlan());
-    // Las dos fechas de verdad se comparan con el D de la base, que puede no ser el del panel:
-    // refresca para que el panel enseñe los días buenos.
-    expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it('si otra persona la ha movido lejos con el panel abierto, no la pisa', async () => {
+    // B ha llevado el clip a D+20; A lo arrastra desde el 23, donde lo veía, al 13.
+    tablas.set('plan_piezas', [filaPiezaDePlan({ fecha: '2026-11-12', desplazamiento: 20 })]);
+
+    expect(await editarPiezaDePlan(CLIP, '2026-10-13', '18:00', ORIGINAL)).toEqual({
+      error: 'La pieza ha cambiado mientras la editabas. Revisa y vuelve a guardar.',
+    });
+    expect(escrituras).toEqual([]);
+    expect(filaDe('plan_piezas', CLIP)).toEqual(filaPiezaDePlan({ fecha: '2026-11-12', desplazamiento: 20 }));
+    expect(refresh).toHaveBeenCalledOnce();
   });
 
   it('una hora vacía se guarda como sin hora (null), nunca como texto vacío', async () => {
@@ -426,7 +487,7 @@ describe('editarEpisodio', () => {
   it('guarda número, invitado y tema sin espacios de más, y vacíos como null', async () => {
     tablas.set('planes', [filaPlan()]);
 
-    expect(await editarEpisodio(PLAN, { numero: ' 07 ', invitado: '', tema: '  Tema de prueba ' })).toEqual({});
+    expect(await editarEpisodio(PLAN, { numero: ' 07 ', invitado: '', tema: '  Tema de prueba ', hora: '' })).toEqual({});
     expect(filaDe('planes', PLAN)).toEqual(filaPlan({ numero: '07', invitado: null, tema: 'Tema de prueba' }));
     expect(refresh).toHaveBeenCalledOnce();
   });
@@ -434,7 +495,7 @@ describe('editarEpisodio', () => {
   it('con episodio hace falta el número', async () => {
     tablas.set('planes', [filaPlan()]);
 
-    expect(await editarEpisodio(PLAN, { numero: '  ', invitado: null, tema: null })).toEqual({
+    expect(await editarEpisodio(PLAN, { numero: '  ', invitado: null, tema: null, hora: null })).toEqual({
       error: 'Falta el número del episodio',
     });
     expect(escrituras).toEqual([]);
@@ -443,14 +504,34 @@ describe('editarEpisodio', () => {
   it('una semana sin episodio no guarda número, invitado ni tema', async () => {
     tablas.set('planes', [filaPlan({ con_episodio: false, numero: null, invitado: null })]);
 
-    expect(await editarEpisodio(PLAN, { numero: '07', invitado: 'Alguien', tema: null })).toEqual({
+    expect(await editarEpisodio(PLAN, { numero: '07', invitado: 'Alguien', tema: null, hora: '19:00' })).toEqual({
       error: 'Esa semana no tiene episodio',
     });
     expect(escrituras).toEqual([]);
   });
 
+  it('guarda la hora del episodio; vacía es sin hora', async () => {
+    tablas.set('planes', [filaPlan()]);
+    expect(await editarEpisodio(PLAN, { numero: '06', invitado: null, tema: null, hora: '9:30' })).toEqual({});
+    expect(filaDe('planes', PLAN)).toHaveProperty('hora_episodio', '09:30');
+
+    expect(await editarEpisodio(PLAN, { numero: '06', invitado: null, tema: null, hora: '  ' })).toEqual({});
+    expect(filaDe('planes', PLAN)).toHaveProperty('hora_episodio', null);
+  });
+
+  it('una hora que no es una hora no se guarda', async () => {
+    tablas.set('planes', [filaPlan()]);
+
+    for (const hora of ['25:00', '19.00', 'tarde']) {
+      expect(await editarEpisodio(PLAN, { numero: '06', invitado: null, tema: null, hora })).toEqual({
+        error: 'Esa hora no es válida',
+      });
+    }
+    expect(escrituras).toEqual([]);
+  });
+
   it('si el plan ya no existe, lo dice y refresca', async () => {
-    expect(await editarEpisodio(PLAN, { numero: '07', invitado: null, tema: null })).toEqual({
+    expect(await editarEpisodio(PLAN, { numero: '07', invitado: null, tema: null, hora: null })).toEqual({
       error: 'Ese plan ya no existe',
     });
     expect(refresh).toHaveBeenCalledOnce();
@@ -501,9 +582,14 @@ describe('anadirPiezaSuelta', () => {
     expect(refresh).toHaveBeenCalledOnce();
   });
 
-  it('un día fuera de D-1…D+5 o una hora que no es una hora no se guardan', async () => {
-    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-29', '11:30', '2026-10-23')).toEqual({
-      error: 'El día tiene que estar entre D-1 y D+5',
+  it('se puede añadir en cualquier día: a D+20 guarda desplazamiento 20', async () => {
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-11-12', '11:30', '2026-10-23')).toEqual({});
+    expect(escrituras[0].valores).toEqual(expect.objectContaining({ fecha: '2026-11-12', desplazamiento: 20 }));
+  });
+
+  it('una fecha que no existe o una hora que no es una hora no se guardan', async () => {
+    expect(await anadirPiezaSuelta(PLAN, 't2', '2026-02-30', '11:30', '2026-10-23')).toEqual({
+      error: 'Esa fecha no es válida',
     });
     expect(await anadirPiezaSuelta(PLAN, 't2', '2026-10-24', '11', '2026-10-23')).toEqual({ error: 'Esa hora no es válida' });
     expect(escrituras).toEqual([]);
@@ -537,14 +623,6 @@ describe('anadirPiezaSuelta', () => {
 });
 
 describe('moverSemana', () => {
-  // Hoy es el miércoles 21 de octubre de 2026 en España: la portada va del lunes 12 de octubre (la
-  // semana pasada) al domingo 8 de noviembre (dentro de dos semanas).
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date('2026-10-21T10:00:00Z'));
-  });
-  afterEach(() => vi.useRealTimers());
-
   it('mueve el plan con mover_plan y refresca', async () => {
     expect(await moverSemana(PLAN, '2026-10-30')).toEqual({});
     expect(llamadasRpc).toEqual([['mover_plan', { plan_id: PLAN, nuevo_dia_d: '2026-10-30' }]]);
@@ -572,25 +650,52 @@ describe('moverSemana', () => {
     expect(llamadasRpc).toEqual([]);
   });
 
-  it('fuera de las semanas que se ven en la portada no se mueve: el plan dejaría de verse', async () => {
-    for (const fecha of ['2027-10-23', '2026-10-11', '2026-11-09']) {
-      expect(await moverSemana(PLAN, fecha)).toEqual({
-        error: 'Solo se puede mover dentro de las semanas que se ven en la portada.',
-      });
-    }
-    expect(llamadasRpc).toEqual([]);
-  });
-
-  it('el primer y el último día de la portada sí valen', async () => {
-    expect(await moverSemana(PLAN, '2026-10-12')).toEqual({});
-    expect(await moverSemana(PLAN, '2026-11-08')).toEqual({});
-    expect(llamadasRpc.map(([, argumentos]) => argumentos.nuevo_dia_d)).toEqual(['2026-10-12', '2026-11-08']);
+  it('se puede mover a cualquier semana, por lejos que quede: el calendario navega a todas', async () => {
+    expect(await moverSemana(PLAN, '2027-10-23')).toEqual({});
+    expect(await moverSemana(PLAN, '2026-01-02')).toEqual({});
+    expect(llamadasRpc.map(([, argumentos]) => argumentos.nuevo_dia_d)).toEqual(['2027-10-23', '2026-01-02']);
   });
 
   it('si Supabase falla por otra cosa, da un error legible y no refresca', async () => {
     rpc.respuesta = { data: null, error: { code: '42501', message: 'permission denied for function mover_plan' } };
 
     expect(await moverSemana(PLAN, '2026-10-30')).toEqual({ error: 'No se ha podido guardar. Vuelve a intentarlo.' });
+    expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe('moverEpisodio', () => {
+  it('mueve solo el episodio con mover_episodio y refresca', async () => {
+    expect(await moverEpisodio(PLAN, '2026-11-06')).toEqual({});
+    expect(llamadasRpc).toEqual([['mover_episodio', { plan_id: PLAN, nuevo_dia_d: '2026-11-06' }]]);
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('si la semana de destino ya tiene plan, lo dice y refresca', async () => {
+    rpc.respuesta = { data: null, error: { code: 'P0001', message: 'semana_con_plan' } };
+
+    expect(await moverEpisodio(PLAN, '2026-10-30')).toEqual({ error: 'Esa semana ya tiene plan' });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('si el plan ya no existe, lo dice y refresca', async () => {
+    rpc.respuesta = { data: null, error: { code: 'P0001', message: 'plan_no_existe' } };
+
+    expect(await moverEpisodio(PLAN, '2026-10-30')).toEqual({ error: 'Ese plan ya no existe' });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('una fecha que no existe no llega a la base', async () => {
+    for (const fecha of ['2026-02-30', '30/10/2026', '']) {
+      expect(await moverEpisodio(PLAN, fecha)).toEqual({ error: 'Esa fecha no es válida' });
+    }
+    expect(llamadasRpc).toEqual([]);
+  });
+
+  it('si Supabase falla por otra cosa, da un error legible y no refresca', async () => {
+    rpc.respuesta = { data: null, error: { code: '42501', message: 'permission denied for function mover_episodio' } };
+
+    expect(await moverEpisodio(PLAN, '2026-10-30')).toEqual({ error: 'No se ha podido guardar. Vuelve a intentarlo.' });
     expect(refresh).not.toHaveBeenCalled();
   });
 });

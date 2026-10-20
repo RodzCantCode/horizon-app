@@ -153,7 +153,6 @@ function FormularioPlan({
     iniciar(async () => {
       try {
         const resultado = await crearPlan({
-          lunes,
           conEpisodio,
           diaD,
           numero: conEpisodio ? numeroLimpio : null,

@@ -3,15 +3,15 @@
 import { refresh } from 'next/cache';
 import { aPieza, leerEstrategiasYPiezas } from '@/lib/datos/estrategias';
 import { aFilaPiezaDePlan, aFilaPlan, leerPiezaDePlan } from '@/lib/datos/semanas';
-import { diaSemana, diasEntre, esFecha, hoyEnMadrid, normalizarHora } from '@/lib/fechas';
+import { esFecha, lunesDe, normalizarHora } from '@/lib/fechas';
 import {
   copiarPieza,
-  DESPLAZAMIENTOS,
+  desplazamientoDe,
   estrategiasParaPlanificar,
   generarPiezasDePlan,
   moverPiezaDePlan,
 } from '@/lib/planes';
-import { AVISO_PIEZA_CAMBIADA, AVISO_SEMANA_CAMBIADA, rangoSemanas } from '@/lib/semanas';
+import { AVISO_PIEZA_CAMBIADA, AVISO_SEMANA_CAMBIADA } from '@/lib/semanas';
 import { crearClienteServidor } from '@/lib/supabase/servidor';
 import type { Estado, Estrategia, NuevaPiezaDePlan } from '@/lib/tipos';
 
@@ -26,9 +26,6 @@ import type { Estado, Estrategia, NuevaPiezaDePlan } from '@/lib/tipos';
 const PIEZA_QUITADA = 'Esa pieza ya no está en el plan';
 const PLAN_NO_EXISTE = 'Ese plan ya no existe';
 const NO_GUARDADO = 'No se ha podido guardar. Vuelve a intentarlo.';
-const SEMANA_NO_VALIDA = 'Esa semana no es válida';
-const DIA_FUERA_DE_LA_SEMANA = 'El día de publicación tiene que caer en esa semana';
-const DIA_FUERA_DEL_PLAN = 'El día tiene que estar entre D-1 y D+5';
 const FECHA_NO_VALIDA = 'Esa fecha no es válida';
 const HORA_NO_VALIDA = 'Esa hora no es válida';
 const FALTA_NUMERO = 'Falta el número del episodio';
@@ -36,7 +33,6 @@ const SIN_EPISODIO = 'Esa semana no tiene episodio';
 const ESTRATEGIA_NO_DISPONIBLE = 'Esa estrategia ya no está disponible';
 const PIEZA_NO_DISPONIBLE = 'Esa pieza ya no está disponible';
 const SEMANA_CON_PLAN = 'Esa semana ya tiene plan';
-const FUERA_DE_LA_PORTADA = 'Solo se puede mover dentro de las semanas que se ven en la portada.';
 
 /**
  * Cambia el estado de una pieza de plan. Al marcarla como programada se quita también la marca de
@@ -61,15 +57,21 @@ export async function marcarEstado(planPiezaId: string, estado: Estado): Promise
   return {};
 }
 
-/** Lo que manda el panel de planificar. `diaD` es el día de publicación o, sin episodio, el de referencia. */
+/**
+ * Lo que manda el navegador al planificar una semana. `diaD` es el día de publicación o, sin episodio,
+ * el de referencia; la semana del plan sale de él. `horaEpisodio` es la hora del episodio (vacía o sin
+ * ella, sin hora). `fechas`, si viene, trae una fecha por ítem de la estrategia, en su orden, para los
+ * posts colocados a mano; `null` (o sin `fechas`) deja la de la estrategia.
+ */
 export type EntradaPlan = {
-  lunes: string;
   conEpisodio: boolean;
   diaD: string;
   numero: string | null;
   invitado: string | null;
   tema: string | null;
+  horaEpisodio?: string | null;
   estrategiaId: string;
+  fechas?: (string | null)[];
 };
 
 /** Sin los espacios de los lados; un texto vacío es `null`. */
@@ -82,12 +84,14 @@ function limpiar(texto: string | null): string | null {
  * La estrategia elegida y las piezas que genera desde el día D, con las estrategias y las piezas de
  * la base: solo si existe, es del tipo que toca y no usa piezas archivadas. Si no, el error que hay
  * que devolver; cuando la estrategia ya no se puede usar, refresca para que el panel deje de
- * ofrecerla. Las piezas las genera siempre el servidor, nunca las manda el navegador.
+ * ofrecerla. Las piezas las genera siempre el servidor, nunca las manda el navegador: de él solo
+ * llegan, si acaso, las `fechas` de cada ítem (ver `generarPiezasDePlan`).
  */
 async function generarConEstrategia(
   estrategiaId: string,
   conEpisodio: boolean,
   diaD: string,
+  fechas?: (string | null)[],
 ): Promise<{ estrategia: Estrategia; nuevas: NuevaPiezaDePlan[] } | { error: string }> {
   let leidas: Awaited<ReturnType<typeof leerEstrategiasYPiezas>>;
   try {
@@ -102,7 +106,7 @@ async function generarConEstrategia(
   );
   if (estrategia) {
     try {
-      return { estrategia, nuevas: generarPiezasDePlan(estrategia, piezas, diaD) };
+      return { estrategia, nuevas: generarPiezasDePlan(estrategia, piezas, diaD, fechas) };
     } catch {
       // No debería pasar: una estrategia disponible tiene todas sus piezas. Si una falta, la
       // estrategia tampoco se puede usar.
@@ -114,10 +118,12 @@ async function generarConEstrategia(
 
 /**
  * Crea el plan de una semana con sus piezas (docs/diseno.md § Planificar). Lo que llega del
- * navegador se vuelve a comprobar aquí: la semana empieza en lunes, el día D cae dentro y la
- * estrategia existe, es del tipo que toca y no usa piezas archivadas. Las piezas las genera el
- * servidor con las piezas y la estrategia de la base, nunca las manda el navegador. Sin episodio no
- * se guardan número, invitado ni tema.
+ * navegador se vuelve a comprobar aquí: el día D, y cada fecha de `fechas`, tiene que ser una fecha;
+ * la hora del episodio, una hora, y la estrategia existe, es del tipo que toca y no usa piezas
+ * archivadas. La semana del plan (`lunes`) es la del día D, la calcula el servidor. Las piezas las
+ * genera el servidor con las piezas y la estrategia de la base, nunca las manda el navegador; con
+ * `fechas`, cada post va en la suya, por lejos de D que quede. Sin episodio no se guardan número,
+ * invitado, tema ni hora del episodio.
  *
  * Plan y piezas se crean de una vez con la función `crear_plan` de la base. Si esa semana ya tiene
  * plan (doble pulsación, o dos personas a la vez), la base no crea otro y aquí se avisa. Cuando el
@@ -125,22 +131,22 @@ async function generarConEstrategia(
  * también se refresca, para que la semana y la lista de estrategias se pongan al día.
  */
 export async function crearPlan(entrada: EntradaPlan): Promise<{ error?: string }> {
-  const { lunes, conEpisodio, diaD, estrategiaId } = entrada;
-  if (!esFecha(lunes) || diaSemana(lunes) !== 0) return { error: SEMANA_NO_VALIDA };
-  if (!esFecha(diaD) || diasEntre(lunes, diaD) < 0 || diasEntre(lunes, diaD) > 6) {
-    return { error: DIA_FUERA_DE_LA_SEMANA };
-  }
+  const { conEpisodio, diaD, estrategiaId, fechas } = entrada;
+  if (!esFecha(diaD)) return { error: FECHA_NO_VALIDA };
+  if (fechas?.some((fecha) => fecha !== null && !esFecha(fecha))) return { error: FECHA_NO_VALIDA };
   const numero = conEpisodio ? limpiar(entrada.numero) : null;
   if (conEpisodio && numero === null) return { error: FALTA_NUMERO };
+  const horaEpisodio = conEpisodio ? leerHora(entrada.horaEpisodio ?? null) : null;
+  if (horaEpisodio === undefined) return { error: HORA_NO_VALIDA };
 
-  const generadas = await generarConEstrategia(estrategiaId, conEpisodio, diaD);
+  const generadas = await generarConEstrategia(estrategiaId, conEpisodio, diaD, fechas);
   if ('error' in generadas) return generadas;
   const { estrategia, nuevas } = generadas;
 
   const supabase = await crearClienteServidor();
   const { error } = await supabase.rpc('crear_plan', {
     plan: aFilaPlan({
-      lunes,
+      lunes: lunesDe(diaD),
       diaD,
       conEpisodio,
       numero,
@@ -148,7 +154,7 @@ export async function crearPlan(entrada: EntradaPlan): Promise<{ error?: string 
       tema: conEpisodio ? limpiar(entrada.tema) : null,
       estrategiaId: estrategia.id,
       estrategiaNombre: estrategia.nombre,
-      horaEpisodio: null,
+      horaEpisodio,
     }),
     piezas: nuevas.map(aFilaPiezaDePlan),
   });
@@ -171,12 +177,6 @@ function leerHora(texto: string | null): string | null | undefined {
   return limpia === null ? null : (normalizarHora(limpia) ?? undefined);
 }
 
-/** Cuántos días hay de D a `fecha`, si cae de D-1 a D+5; si no, `null`. */
-function desplazamientoEnElPlan(diaD: string, fecha: string): number | null {
-  const desplazamiento = diasEntre(diaD, fecha);
-  return DESPLAZAMIENTOS.includes(desplazamiento) ? desplazamiento : null;
-}
-
 /**
  * Los errores de las funciones de la base que dicen que el panel se ha quedado desfasado (otra
  * persona ha movido o borrado el plan), ya en español; `null` si es otro error o no hay error.
@@ -189,9 +189,10 @@ function avisoDePlanDesfasado(error: { code: string; message: string } | null): 
 }
 
 /**
- * Cambia el día y la hora de una pieza de plan. La pieza y su plan se leen de la base: el día tiene
- * que caer de D-1 a D+5 de ese plan y su posición respecto a D se recalcula. Si estaba programada y
- * cambia de verdad, `moverPiezaDePlan` la devuelve a pendiente y la marca para revisar en Metricool.
+ * Cambia el día y la hora de una pieza de plan. El día puede ser cualquiera, también lejos del
+ * episodio; la pieza y su plan se leen de la base y su posición respecto al D de la base se recalcula
+ * (`desplazamientoDe`: a D+20 guarda 20). Si estaba programada y cambia de verdad, `moverPiezaDePlan`
+ * la devuelve a pendiente y la marca para revisar en Metricool.
  * Una hora vacía es «sin hora». Si la pieza ya no existe, lo dice y refresca, como marcarEstado.
  *
  * `original` es el día y la hora que enseñaba el panel. Si la pieza ya no está ahí (otra persona ha
@@ -207,7 +208,7 @@ export async function editarPiezaDePlan(
 ): Promise<{ error?: string }> {
   const horaNueva = leerHora(hora);
   if (horaNueva === undefined) return { error: HORA_NO_VALIDA };
-  if (!esFecha(fecha)) return { error: DIA_FUERA_DEL_PLAN };
+  if (!esFecha(fecha)) return { error: FECHA_NO_VALIDA };
 
   let leida: Awaited<ReturnType<typeof leerPiezaDePlan>>;
   try {
@@ -223,12 +224,7 @@ export async function editarPiezaDePlan(
     refresh();
     return { error: AVISO_PIEZA_CAMBIADA };
   }
-  const desplazamiento = desplazamientoEnElPlan(leida.plan.diaD, fecha);
-  if (desplazamiento === null) {
-    // Los días del panel salen de su día D, que puede no ser ya el de la base.
-    refresh();
-    return { error: DIA_FUERA_DEL_PLAN };
-  }
+  const desplazamiento = desplazamientoDe(leida.plan.diaD, fecha);
 
   const movida = moverPiezaDePlan(leida.pieza, fecha, horaNueva);
   const supabase = await crearClienteServidor();
@@ -274,15 +270,19 @@ export type DatosEpisodio = {
   numero: string | null;
   invitado: string | null;
   tema: string | null;
+  hora: string | null;
 };
 
 /**
- * Cambia número, invitado y tema del episodio de un plan. El número hace falta; invitado y tema
- * pueden quedar vacíos. Una semana sin episodio no los tiene: se comprueba en la base.
+ * Cambia número, invitado, tema y hora del episodio de un plan. El número hace falta; invitado, tema
+ * y hora pueden quedar vacíos (la hora vacía es «sin hora»). Una semana sin episodio no los tiene: se
+ * comprueba en la base.
  */
 export async function editarEpisodio(planId: string, datos: DatosEpisodio): Promise<{ error?: string }> {
   const numero = limpiar(datos.numero);
   if (numero === null) return { error: FALTA_NUMERO };
+  const hora = leerHora(datos.hora);
+  if (hora === undefined) return { error: HORA_NO_VALIDA };
 
   const supabase = await crearClienteServidor();
   const leido = await supabase.from('planes').select('con_episodio').eq('id', planId).maybeSingle();
@@ -295,7 +295,7 @@ export async function editarEpisodio(planId: string, datos: DatosEpisodio): Prom
 
   const { data, error } = await supabase
     .from('planes')
-    .update({ numero, invitado: limpiar(datos.invitado), tema: limpiar(datos.tema) })
+    .update({ numero, invitado: limpiar(datos.invitado), tema: limpiar(datos.tema), hora_episodio: hora })
     .eq('id', planId)
     .select('id');
 
@@ -308,8 +308,9 @@ export async function editarEpisodio(planId: string, datos: DatosEpisodio): Prom
 
 /**
  * Añade a un plan una pieza que no venía en su estrategia: una copia fija de la pieza de la base
- * (`copiarPieza`), en un día de D-1 a D+5 de ese plan y a la hora elegida (vacía, sin hora). Una pieza
- * archivada o que ya no existe no se puede añadir. Empieza pendiente, como todas.
+ * (`copiarPieza`), en cualquier día (su posición respecto al D del plan, `desplazamientoDe`) y a la
+ * hora elegida (vacía, sin hora). Una pieza archivada o que ya no existe no se puede añadir. Empieza
+ * pendiente, como todas.
  *
  * `diaDEsperado` es el día D que enseñaba el panel, del que salen los días que ofrece. Si el plan ya
  * tiene otro (otra persona ha movido la semana con el panel abierto), no se añade: el día elegido
@@ -324,7 +325,7 @@ export async function anadirPiezaSuelta(
 ): Promise<{ error?: string }> {
   const horaElegida = leerHora(hora);
   if (horaElegida === undefined) return { error: HORA_NO_VALIDA };
-  if (!esFecha(fecha)) return { error: DIA_FUERA_DEL_PLAN };
+  if (!esFecha(fecha)) return { error: FECHA_NO_VALIDA };
 
   const supabase = await crearClienteServidor();
   const [plan, pieza] = await Promise.all([
@@ -345,8 +346,7 @@ export async function anadirPiezaSuelta(
     return { error: PIEZA_NO_DISPONIBLE };
   }
   const diaD = plan.data.dia_d;
-  const desplazamiento = desplazamientoEnElPlan(diaD, fecha);
-  if (desplazamiento === null) return { error: DIA_FUERA_DEL_PLAN };
+  const desplazamiento = desplazamientoDe(diaD, fecha);
 
   let nueva: NuevaPiezaDePlan;
   try {
@@ -371,20 +371,37 @@ export async function anadirPiezaSuelta(
 /**
  * Mueve la semana entera de fecha con la función `mover_plan` de la base: el día D pasa a
  * `nuevoDiaD` y todas las piezas se mueven los mismos días; las programadas quedan para revisar en
- * Metricool. Si el nuevo D cae en otra semana que ya tiene plan, no cambia nada.
- *
- * El nuevo D tiene que caer en las semanas que pinta la portada hoy (`rangoSemanas`): más allá, el
- * plan dejaría de verse y no habría desde dónde abrirlo para volver a moverlo.
+ * Metricool. Si el nuevo D cae en otra semana que ya tiene plan, no cambia nada. El nuevo D puede
+ * caer en cualquier semana: el calendario navega a todas.
  */
 export async function moverSemana(planId: string, nuevoDiaD: string): Promise<{ error?: string }> {
   if (!esFecha(nuevoDiaD)) return { error: FECHA_NO_VALIDA };
 
-  // «Hoy» después de crear el cliente, que espera a la petición real (lib/supabase/servidor.ts).
   const supabase = await crearClienteServidor();
-  const { desde, hasta } = rangoSemanas(hoyEnMadrid());
-  if (nuevoDiaD < desde || nuevoDiaD > hasta) return { error: FUERA_DE_LA_PORTADA };
-
   const { error } = await supabase.rpc('mover_plan', { plan_id: planId, nuevo_dia_d: nuevoDiaD });
+
+  const desfase = avisoDePlanDesfasado(error);
+  if (desfase) {
+    refresh();
+    return { error: desfase };
+  }
+  if (error) return { error: NO_GUARDADO };
+
+  refresh();
+  return {};
+}
+
+/**
+ * Mueve solo el episodio con la función `mover_episodio` de la base: el día D (y la semana del plan)
+ * pasa a `nuevoDiaD`, y los posts se quedan en su fecha, con su hora, estado y marca de revisar; solo
+ * se recalcula su posición respecto al nuevo D. Si el nuevo D cae en otra semana que ya tiene plan,
+ * o el plan ya no existe, no cambia nada: se avisa y se refresca, como `moverSemana`.
+ */
+export async function moverEpisodio(planId: string, nuevoDiaD: string): Promise<{ error?: string }> {
+  if (!esFecha(nuevoDiaD)) return { error: FECHA_NO_VALIDA };
+
+  const supabase = await crearClienteServidor();
+  const { error } = await supabase.rpc('mover_episodio', { plan_id: planId, nuevo_dia_d: nuevoDiaD });
 
   const desfase = avisoDePlanDesfasado(error);
   if (desfase) {
