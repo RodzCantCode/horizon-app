@@ -38,7 +38,9 @@ export function Tarjeta({
         },
         onDragEnd: arrastre.alTerminar,
       }
-    : {};
+    : // Sin arrastre, el navegador no debe arrastrar el enlace por su cuenta: soltarlo en un campo (por
+      // ejemplo «Invitado», en el modo programar) escribiría su dirección.
+      { draggable: false };
 
   if (tarjeta.tipo === 'episodio') {
     const { plan } = tarjeta;
