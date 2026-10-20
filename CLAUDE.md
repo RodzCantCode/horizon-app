@@ -44,9 +44,9 @@ publica en redes. **Pantallas, estados, horas y datos: [docs/diseno.md](docs/dis
 
 | Entidad | Qué es |
 | --- | --- |
-| Pieza | Tipo de contenido (T0–T4, clip principal, clip secundario, teaser, clip de archivo): nombre corto, formato (Carrusel o Reel), canales, días permitidos respecto al episodio, días de preparación y hora habitual |
-| Estrategia | Combinación de piezas en días concretos (D-1 a D+5), para semana con o sin episodio |
-| Plan | Episodio (o semana sin episodio) + estrategia elegida. Al generarse guarda una **copia fija** de las piezas con su fecha y hora reales y su estado (pendiente o programada) |
+| Pieza | Tipo de contenido (T0–T4, clip principal, clip secundario, teaser, clip de archivo): nombre corto, formato (Carrusel o Reel), canales, días de preparación y hora habitual (los «días permitidos» ya no se usan: la columna sigue en la base) |
+| Estrategia | Combinación de piezas en días concretos (D-7 a D+14), para semana con o sin episodio |
+| Plan | Episodio (con su día y hora; o semana sin episodio) + estrategia elegida. Al generarse guarda una **copia fija** de las piezas con su fecha y hora reales y su estado (pendiente o programada). Los posts pueden estar en cualquier fecha |
 
 Reglas que no se negocian:
 
@@ -101,9 +101,11 @@ Supabase está en [docs/acceso.md](docs/acceso.md). Falta:
 3. Antes de usarla con datos reales, una copia periódica de los datos fuera de Supabase (el plan
    gratuito no da copias que Mario pueda restaurar).
 
-**20-oct-2026: rediseño en curso** (calendario con arrastre, piezas y estrategias con nombres
-claros, nuevo Inicio): [docs/rediseno-calendario.md](docs/rediseno-calendario.md). En `preview`:
-navegación lateral, Inicio con la semana en curso y paneles en ventana centrada.
+**20-oct-2026: rediseño en curso** ([docs/rediseno-calendario.md](docs/rediseno-calendario.md)). La
+fase 1 (Calendario con programar y arrastre, hora del episodio, estrategias de D-7 a D+14) está
+construida en `preview` y descrita en [docs/diseno.md](docs/diseno.md); aún no está en producción
+(falta el OK de Mario). Quedan la fase 2 (piezas y estrategias con nombres claros) y la 3 (nuevo
+Inicio). La migración de la fase 1 ya está aplicada en la base, que comparten `preview` y producción.
 
 Supabase: proyecto «Horizon Sport - App» (organización «Horizon Sport», plan gratuito, Europa);
 Supabase pausa los proyectos gratuitos tras una semana sin uso y se reactivan desde el panel sin
@@ -168,7 +170,7 @@ publicable; las dos son públicas por diseño). `.env.local` no se sube. La clav
 | `lib/datos/` | Lecturas de Supabase en el servidor. Pasan las filas de la base (snake_case) a los tipos de `lib/tipos.ts`, y al revés lo que se manda a la base (`crear_plan`, `cambiar_estrategia`, una pieza suelta): las pantallas y la lógica de `lib/` no ven las de la base |
 | `lib/pruebas/baseSimulada.ts` | Base de datos en memoria que sustituye al cliente de Supabase en las pruebas de las acciones de servidor, con las piezas y estrategias del prototipo |
 | `supabase/migrations/` | Las migraciones aplicadas, con la versión que registró `apply_migration` |
-| `supabase/pruebas/` | Pruebas de la base en SQL: `seguridad.sql` (RLS y registro) y `funciones.sql` (`crear_plan`, `mover_plan`, `cambiar_estrategia`) |
+| `supabase/pruebas/` | Pruebas de la base en SQL: `seguridad.sql` (RLS y registro) y `funciones.sql` (`crear_plan`, `mover_plan`, `mover_episodio`, `cambiar_estrategia`) |
 | `docs/plan-construccion.md` | El plan por tareas con que se construyó, y lo que queda (Tarea 12) |
 | `docs/acceso.md` | Cómo invitar, cómo mandar una recuperación, qué hay configurado en Supabase y la operación de Vercel, Cloudflare y Resend |
 | `prototipo/index.html` | Prototipo de octubre: referencia del modelo, no de la interfaz. No se sirve |
