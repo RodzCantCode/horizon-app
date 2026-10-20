@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { leerPiezaDePlan, leerPlanDeSemana, leerPlanes, leerSemanas } from '@/lib/datos/semanas';
+import { aFilaPlan, aPlan, leerPiezaDePlan, leerPlanDeSemana, leerPlanes, leerSemanas } from '@/lib/datos/semanas';
 import type { Tables } from '@/lib/supabase/tipos';
 
 // Cliente de Supabase simulado (vi.mock se eleva por encima de los import): cada consulta apunta las
@@ -41,6 +41,8 @@ const filaPlan: Tables<'planes'> = {
   tema: null,
   estrategia_id: 'e1',
   estrategia_nombre: 'E1 · Anticipación fuerte',
+  // Como las de plan_piezas, la hora del episodio llega con segundos.
+  hora_episodio: '19:00:00',
 };
 
 const filaPieza: Tables<'plan_piezas'> = {
@@ -99,6 +101,7 @@ describe('leerSemanas', () => {
         tema: null,
         estrategiaId: 'e1',
         estrategiaNombre: 'E1 · Anticipación fuerte',
+        horaEpisodio: '19:00',
       },
     ]);
     expect(piezas).toEqual([
@@ -211,5 +214,38 @@ describe('leerPlanDeSemana', () => {
   it('si Supabase falla, lanza un error', async () => {
     preparar({ data: null, error: { message: 'caído' } }, { data: [], error: null });
     await expect(leerPlanDeSemana('2026-10-12')).rejects.toThrow('No se ha podido leer la semana');
+  });
+});
+
+describe('aPlan y aFilaPlan', () => {
+  it('aPlan pasa la hora del episodio a HH:MM, o null si no tiene', () => {
+    expect(aPlan(filaPlan).horaEpisodio).toBe('19:00');
+    expect(aPlan({ ...filaPlan, hora_episodio: null }).horaEpisodio).toBe(null);
+  });
+
+  it('aFilaPlan manda hora_episodio a crear_plan', () => {
+    const plan = {
+      lunes: '2026-10-12',
+      diaD: '2026-10-16',
+      conEpisodio: true,
+      numero: '05',
+      invitado: null,
+      tema: null,
+      estrategiaId: 'e1',
+      estrategiaNombre: 'E1 · Anticipación fuerte',
+      horaEpisodio: '19:00',
+    };
+    expect(aFilaPlan(plan)).toEqual({
+      lunes: '2026-10-12',
+      dia_d: '2026-10-16',
+      con_episodio: true,
+      numero: '05',
+      invitado: null,
+      tema: null,
+      estrategia_id: 'e1',
+      estrategia_nombre: 'E1 · Anticipación fuerte',
+      hora_episodio: '19:00',
+    });
+    expect(aFilaPlan({ ...plan, horaEpisodio: null }).hora_episodio).toBe(null);
   });
 });

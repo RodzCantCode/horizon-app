@@ -148,6 +148,7 @@ export async function crearPlan(entrada: EntradaPlan): Promise<{ error?: string 
       tema: conEpisodio ? limpiar(entrada.tema) : null,
       estrategiaId: estrategia.id,
       estrategiaNombre: estrategia.nombre,
+      horaEpisodio: null,
     }),
     piezas: nuevas.map(aFilaPiezaDePlan),
   });

@@ -1,5 +1,6 @@
--- Pruebas de las funciones de varias filas de los planes (migración funciones_planes): crear_plan,
--- mover_plan y cambiar_estrategia.
+-- Pruebas de las funciones de varias filas de los planes (migraciones funciones_planes y
+-- calendario): crear_plan, mover_plan, mover_episodio y cambiar_estrategia, y los límites de
+-- estrategia_piezas.desplazamiento.
 --
 -- Cómo se ejecutan: igual que seguridad.sql, el archivo entero con execute_sql de la conexión
 -- supabase-horizon. Todo va en una transacción que acaba en rollback, así que el usuario, los planes
@@ -96,7 +97,7 @@ declare
   plan_esperado jsonb := '{"lunes": "2099-03-02", "dia_d": "2099-03-06", "con_episodio": true,
     "numero": "99", "invitado": "Invitado de prueba", "tema": null,
     "estrategia_id": "00000000-0000-4000-8000-0000000000c1",
-    "estrategia_nombre": "Estrategia de prueba"}';
+    "estrategia_nombre": "Estrategia de prueba", "hora_episodio": null}';
   piezas_esperadas jsonb := '[
     {"pieza_id": "00000000-0000-4000-8000-0000000000b1", "nombre": "Pieza A",
      "nombre_corto": "Pieza A", "formato": "reel", "canales": ["ig", "tiktok"],
@@ -434,12 +435,13 @@ end $$;
 --    authenticated sí. Sin sesión, la llamada se rechaza antes de entrar en la función.
 do $$
 declare
-  prueba text := 'crear_plan, mover_plan y cambiar_estrategia solo se ejecutan con sesión';
+  prueba text := 'crear_plan, mover_plan, mover_episodio y cambiar_estrategia solo se ejecutan con sesión';
   plan_json jsonb := pg_temp.plan('2099-05-04', '2099-05-08');
   funcion text;
   fallos text[] := '{}';
 begin
   foreach funcion in array array['public.crear_plan(jsonb, jsonb)', 'public.mover_plan(uuid, date)',
+                                 'public.mover_episodio(uuid, date)',
                                  'public.cambiar_estrategia(uuid, uuid, text, jsonb)'] loop
     if has_function_privilege('public', funcion, 'execute') then
       fallos := fallos || ('public puede ejecutar ' || funcion);
@@ -469,6 +471,14 @@ begin
     end if;
   end;
   begin
+    perform public.mover_episodio('00000000-0000-4000-8000-0000000000f0', '2099-05-08');
+    fallos := fallos || 'anon ha ejecutado mover_episodio'::text;
+  exception when insufficient_privilege then
+    if sqlerrm not like 'permission denied for function mover_episodio%' then
+      fallos := fallos || ('mover_episodio: ' || sqlerrm);
+    end if;
+  end;
+  begin
     perform public.cambiar_estrategia('00000000-0000-4000-8000-0000000000f0', null, 'Prueba', '[]');
     fallos := fallos || 'anon ha ejecutado cambiar_estrategia'::text;
   exception when insufficient_privilege then
@@ -479,6 +489,220 @@ begin
   reset role;
   insert into resultados (prueba, ok, detalle)
   values (prueba, cardinality(fallos) = 0, array_to_string(fallos, '; '));
+exception when others then
+  insert into resultados (prueba, ok, detalle) values (prueba, false, sqlerrm);
+end $$;
+
+-- 9. crear_plan guarda la hora del episodio (llega `HH:MM`, la base la da con segundos).
+do $$
+declare
+  prueba text := 'crear_plan guarda hora_episodio';
+  id_plan uuid;
+  hora time;
+begin
+  perform pg_temp.con_sesion('00000000-0000-4000-8000-0000000000a1');
+  id_plan := public.crear_plan(pg_temp.plan('2099-06-01', '2099-06-05')
+                                 || '{"hora_episodio": "19:00"}', '[]');
+  select p.hora_episodio into hora from public.planes as p where p.id = id_plan;
+  reset role;
+  insert into resultados (prueba, ok, detalle)
+  values (prueba, coalesce(hora = '19:00', false), 'hora_episodio ' || coalesce(hora::text, 'null'));
+exception when others then
+  insert into resultados (prueba, ok, detalle) values (prueba, false, sqlerrm);
+end $$;
+
+-- 10. Sin la clave hora_episodio (como lo manda el código publicado antes de esta columna), el plan
+--     se crea igual y la hora queda en null.
+do $$
+declare
+  prueba text := 'crear_plan sin la clave hora_episodio deja la hora en null';
+  id_plan uuid;
+  hora time;
+  tiene_columna boolean;
+begin
+  perform pg_temp.con_sesion('00000000-0000-4000-8000-0000000000a1');
+  id_plan := public.crear_plan(pg_temp.plan('2099-06-08', '2099-06-12'), '[]');
+  select p.hora_episodio into hora from public.planes as p where p.id = id_plan;
+  reset role;
+  tiene_columna := exists (select 1
+                             from information_schema.columns
+                            where table_schema = 'public' and table_name = 'planes'
+                              and column_name = 'hora_episodio');
+  insert into resultados (prueba, ok, detalle)
+  values (prueba, id_plan is not null and tiene_columna and hora is null,
+          format('plan %s; columna %s; hora_episodio %s',
+                 case when id_plan is null then 'no creado' else 'creado' end,
+                 case when tiene_columna then 'existe' else 'no existe' end,
+                 coalesce(hora::text, 'null')));
+exception when others then
+  insert into resultados (prueba, ok, detalle) values (prueba, false, sqlerrm);
+end $$;
+
+-- 11. Una estrategia admite piezas de D-7 a D+14 y rechaza las de fuera (D-8 y D+15).
+do $$
+declare
+  prueba text := 'estrategia_piezas admite de -7 a 14 y rechaza -8 y 15';
+  desplazamiento int;
+  fallos text[] := '{}';
+begin
+  perform pg_temp.con_sesion('00000000-0000-4000-8000-0000000000a1');
+  foreach desplazamiento in array array[-7, 14] loop
+    begin
+      insert into public.estrategia_piezas (estrategia_id, pieza_id, desplazamiento)
+      values ('00000000-0000-4000-8000-0000000000c1', '00000000-0000-4000-8000-0000000000b1',
+              desplazamiento);
+    exception when others then
+      fallos := fallos || format('%s rechazado: %s', desplazamiento, sqlerrm);
+    end;
+  end loop;
+  foreach desplazamiento in array array[-8, 15] loop
+    begin
+      insert into public.estrategia_piezas (estrategia_id, pieza_id, desplazamiento)
+      values ('00000000-0000-4000-8000-0000000000c1', '00000000-0000-4000-8000-0000000000b1',
+              desplazamiento);
+      fallos := fallos || format('%s admitido', desplazamiento);
+    exception when check_violation then
+      null;
+    end;
+  end loop;
+  reset role;
+  insert into resultados (prueba, ok, detalle)
+  values (prueba, cardinality(fallos) = 0, array_to_string(fallos, '; '));
+exception when others then
+  insert into resultados (prueba, ok, detalle) values (prueba, false, sqlerrm);
+end $$;
+
+-- 12. Mover solo el episodio a otra semana cambia D y el lunes del plan, deja la fecha, la hora, el
+--     estado y la marca de revisar de cada post, y recalcula su desplazamiento (días de D a su fecha).
+do $$
+declare
+  prueba text := 'mover_episodio cambia D y lunes, deja los posts y recalcula su desplazamiento';
+  piezas_json jsonb := jsonb_build_array(
+    pg_temp.pieza('Programada', -1, '2099-06-18', '18:00'),
+    pg_temp.pieza('Pendiente', 0, '2099-06-19', '19:30'),
+    pg_temp.pieza('Pendiente con revisar', 4, '2099-06-23'));
+  piezas_esperadas jsonb := '{
+    "Programada": {"desplazamiento": -6, "fecha": "2099-06-18", "hora": "18:00:00",
+                   "estado": "programada", "revisar": false},
+    "Pendiente": {"desplazamiento": -5, "fecha": "2099-06-19", "hora": "19:30:00",
+                  "estado": "pendiente", "revisar": false},
+    "Pendiente con revisar": {"desplazamiento": -1, "fecha": "2099-06-23", "hora": null,
+                              "estado": "pendiente", "revisar": true}}';
+  id_plan uuid;
+  plan_movido jsonb;
+  piezas_movidas jsonb;
+  fallos text[] := '{}';
+begin
+  perform pg_temp.con_sesion('00000000-0000-4000-8000-0000000000a1');
+  id_plan := public.crear_plan(pg_temp.plan('2099-06-15', '2099-06-19'), piezas_json);
+  update public.plan_piezas set estado = 'programada'
+   where plan_id = id_plan and nombre = 'Programada';
+  update public.plan_piezas set revisar = true
+   where plan_id = id_plan and nombre = 'Pendiente con revisar';
+  -- Del viernes 19 al miércoles 24: el episodio pasa a la semana siguiente y los posts se quedan.
+  perform public.mover_episodio(id_plan, '2099-06-24');
+  select jsonb_build_object('lunes', p.lunes, 'dia_d', p.dia_d)
+    into plan_movido
+    from public.planes as p
+   where p.id = id_plan;
+  select jsonb_object_agg(pp.nombre, jsonb_build_object('desplazamiento', pp.desplazamiento,
+                                                        'fecha', pp.fecha, 'hora', pp.hora,
+                                                        'estado', pp.estado,
+                                                        'revisar', pp.revisar))
+    into piezas_movidas
+    from public.plan_piezas as pp
+   where pp.plan_id = id_plan;
+  reset role;
+  if plan_movido is distinct from '{"lunes": "2099-06-22", "dia_d": "2099-06-24"}' then
+    fallos := fallos || ('plan ' || coalesce(plan_movido::text, 'ninguno'));
+  end if;
+  if piezas_movidas is distinct from piezas_esperadas then
+    fallos := fallos || ('piezas ' || coalesce(piezas_movidas::text, 'ninguna'));
+  end if;
+  insert into resultados (prueba, ok, detalle)
+  values (prueba, cardinality(fallos) = 0, array_to_string(fallos, '; '));
+exception when others then
+  insert into resultados (prueba, ok, detalle) values (prueba, false, sqlerrm);
+end $$;
+
+-- 13. Mover el episodio a una semana que ya tiene otro plan: semana_con_plan y no cambia nada (ni
+--     el plan, ni sus posts, ni el registro).
+do $$
+declare
+  prueba text := 'mover_episodio a una semana que ya tiene plan da semana_con_plan y no cambia nada';
+  id_plan uuid;
+  antes jsonb;
+  despues jsonb;
+  error_mover text;
+begin
+  perform pg_temp.con_sesion('00000000-0000-4000-8000-0000000000a1');
+  id_plan := public.crear_plan(pg_temp.plan('2099-06-29', '2099-07-03'),
+                               jsonb_build_array(pg_temp.pieza('Programada', 0, '2099-07-03', '18:00'),
+                                                 pg_temp.pieza('Pendiente', 1, '2099-07-04')));
+  perform public.crear_plan(pg_temp.plan('2099-07-06', '2099-07-10'), '[]');
+  update public.plan_piezas set estado = 'programada'
+   where plan_id = id_plan and nombre = 'Programada';
+  antes := pg_temp.foto(id_plan);
+  begin
+    perform public.mover_episodio(id_plan, '2099-07-08');
+  exception when others then
+    error_mover := sqlstate || ' ' || sqlerrm;
+  end;
+  despues := pg_temp.foto(id_plan);
+  reset role;
+  insert into resultados (prueba, ok, detalle)
+  values (prueba,
+          coalesce(error_mover = 'P0001 semana_con_plan' and antes is not null
+                   and despues = antes, false),
+          format('error %s; %s', coalesce(error_mover, 'ninguno'),
+                 case when antes is not null and despues = antes then 'sin cambios'
+                      else format('antes %s; después %s', coalesce(antes::text, 'nada'),
+                                  coalesce(despues::text, 'nada')) end));
+exception when others then
+  insert into resultados (prueba, ok, detalle) values (prueba, false, sqlerrm);
+end $$;
+
+-- 14. Mover el episodio al mismo día no cambia nada: ni el plan, ni sus posts, ni el registro.
+do $$
+declare
+  prueba text := 'mover_episodio al mismo día D no cambia nada';
+  id_plan uuid;
+  antes jsonb;
+  despues jsonb;
+begin
+  perform pg_temp.con_sesion('00000000-0000-4000-8000-0000000000a1');
+  id_plan := public.crear_plan(pg_temp.plan('2099-07-13', '2099-07-17'),
+                               jsonb_build_array(pg_temp.pieza('Programada', 0, '2099-07-17')));
+  update public.plan_piezas set estado = 'programada' where plan_id = id_plan;
+  antes := pg_temp.foto(id_plan);
+  perform public.mover_episodio(id_plan, '2099-07-17');
+  despues := pg_temp.foto(id_plan);
+  reset role;
+  insert into resultados (prueba, ok, detalle)
+  values (prueba, coalesce(antes is not null and despues = antes, false),
+          case when antes is not null and despues = antes then 'sin cambios'
+               else format('antes %s; después %s', coalesce(antes::text, 'nada'),
+                           coalesce(despues::text, 'nada')) end);
+exception when others then
+  insert into resultados (prueba, ok, detalle) values (prueba, false, sqlerrm);
+end $$;
+
+-- 15. Con un plan que no existe (otra persona lo acaba de borrar), mover_episodio da plan_no_existe.
+do $$
+declare
+  prueba text := 'mover_episodio de un plan que no existe da plan_no_existe';
+  error_mover text;
+begin
+  perform pg_temp.con_sesion('00000000-0000-4000-8000-0000000000a1');
+  begin
+    perform public.mover_episodio('00000000-0000-4000-8000-0000000000f0', '2099-07-24');
+  exception when others then
+    error_mover := sqlstate || ' ' || sqlerrm;
+  end;
+  reset role;
+  insert into resultados (prueba, ok, detalle)
+  values (prueba, coalesce(error_mover = 'P0001 plan_no_existe', false),
+          coalesce(error_mover, 'sin error'));
 exception when others then
   insert into resultados (prueba, ok, detalle) values (prueba, false, sqlerrm);
 end $$;

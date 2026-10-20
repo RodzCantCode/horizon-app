@@ -49,6 +49,7 @@ function filaPlan(cambios: Partial<Tables<'planes'>> = {}): Tables<'planes'> {
     tema: null,
     estrategia_id: 'e1',
     estrategia_nombre: 'E1 · Anticipación fuerte',
+    hora_episodio: null,
     ...cambios,
   };
 }
@@ -164,6 +165,7 @@ describe('crearPlan', () => {
             tema: null,
             estrategia_id: 'e1',
             estrategia_nombre: 'E1 · Anticipación fuerte',
+            hora_episodio: null,
           },
           piezas: [
             { pieza_id: 't4', nombre: 'T4 · Historia del invitado', nombre_corto: 'Historia del invitado', formato: 'slide', canales: ['ig', 'tiktok'], dias_preparacion: 3, desplazamiento: -1, fecha: '2026-10-22', hora: null },
@@ -245,6 +247,7 @@ describe('crearPlan', () => {
       tema: null,
       estrategia_id: 'e3',
       estrategia_nombre: 'E3 · Recopilación',
+      hora_episodio: null,
     });
     expect(piezasEnviadas().map((p) => p.fecha)).toEqual(['2026-10-22', '2026-10-24', '2026-10-27', '2026-10-28']);
   });

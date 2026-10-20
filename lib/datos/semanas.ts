@@ -19,6 +19,11 @@ export function comprobar<T extends string>(valor: string, validos: readonly T[]
   throw new Error(`Valor desconocido en ${campo}: «${valor}»`);
 }
 
+/** Las columnas `time` llegan como «18:00:00»; la app trabaja con «18:00». */
+function aHora(hora: string | null): string | null {
+  return hora === null ? null : hora.slice(0, 5);
+}
+
 export function aPlan(fila: Tables<'planes'>): Plan {
   return {
     id: fila.id,
@@ -30,6 +35,7 @@ export function aPlan(fila: Tables<'planes'>): Plan {
     tema: fila.tema,
     estrategiaId: fila.estrategia_id,
     estrategiaNombre: fila.estrategia_nombre,
+    horaEpisodio: aHora(fila.hora_episodio),
   };
 }
 
@@ -45,8 +51,7 @@ export function aPiezaDePlan(fila: Tables<'plan_piezas'>): PiezaDePlan {
     diasPreparacion: fila.dias_preparacion,
     desplazamiento: fila.desplazamiento,
     fecha: fila.fecha,
-    // Las columnas `time` llegan como «18:00:00»; la app trabaja con «18:00».
-    hora: fila.hora === null ? null : fila.hora.slice(0, 5),
+    hora: aHora(fila.hora),
     estado: comprobar(fila.estado, ESTADOS, 'plan_piezas.estado'),
     revisar: fila.revisar,
   };
@@ -63,6 +68,7 @@ export function aFilaPlan(plan: Omit<Plan, 'id'>): TablesInsert<'planes'> {
     tema: plan.tema,
     estrategia_id: plan.estrategiaId,
     estrategia_nombre: plan.estrategiaNombre,
+    hora_episodio: plan.horaEpisodio,
   };
 }
 

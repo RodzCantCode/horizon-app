@@ -193,6 +193,7 @@ export type Database = {
           dia_d: string
           estrategia_id: string | null
           estrategia_nombre: string
+          hora_episodio: string | null
           id: string
           invitado: string | null
           lunes: string
@@ -204,6 +205,7 @@ export type Database = {
           dia_d: string
           estrategia_id?: string | null
           estrategia_nombre: string
+          hora_episodio?: string | null
           id?: string
           invitado?: string | null
           lunes: string
@@ -215,6 +217,7 @@ export type Database = {
           dia_d?: string
           estrategia_id?: string | null
           estrategia_nombre?: string
+          hora_episodio?: string | null
           id?: string
           invitado?: string | null
           lunes?: string
@@ -276,6 +279,10 @@ export type Database = {
         Returns: undefined
       }
       crear_plan: { Args: { piezas: Json; plan: Json }; Returns: string }
+      mover_episodio: {
+        Args: { nuevo_dia_d: string; plan_id: string }
+        Returns: undefined
+      }
       mover_plan: {
         Args: { nuevo_dia_d: string; plan_id: string }
         Returns: undefined

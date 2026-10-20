@@ -36,6 +36,7 @@ const planEp05: Plan = {
   tema: null,
   estrategiaId: 'e1',
   estrategiaNombre: 'E1 · Anticipación fuerte',
+  horaEpisodio: null,
 };
 
 function piezaDePlan(cambios: Partial<PiezaDePlan> & Pick<PiezaDePlan, 'id' | 'fecha'>): PiezaDePlan {

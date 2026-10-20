@@ -71,6 +71,8 @@ export type Plan = {
   tema: string | null;
   estrategiaId: string | null;
   estrategiaNombre: string;
+  /** Hora `HH:MM` de publicación del episodio; `null` si no la tiene (o es una semana sin episodio). */
+  horaEpisodio: string | null;
 };
 
 /**

@@ -75,6 +75,7 @@ const plan: Plan = {
   tema: null,
   estrategiaId: 'e1',
   estrategiaNombre: 'E1 · Anticipación fuerte',
+  horaEpisodio: null,
 };
 
 describe('generarPiezasDePlan', () => {
