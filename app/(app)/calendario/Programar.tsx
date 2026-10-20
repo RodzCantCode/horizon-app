@@ -131,8 +131,8 @@ export function empezarArrastre(datos: DataTransfer, valor: string) {
  * y las estrategias con su número de posts y su mini fila. Pulsar una estrategia pega sus posts en el
  * calendario. Si `crearPlan` devuelve un error, se enseña y el modo sigue abierto con lo colocado.
  *
- * La transición de **Guardar** (`guardando`, `iniciar`) es de Calendario.tsx, que deja de dejar
- * arrastrar mientras dura. Aquí, mientras dura, no se cancela ni se cambia nada: el plan se crea con
+ * La transición de **Guardar** (`guardando`, `iniciar`) es de Calendario.tsx, que no deja arrastrar
+ * mientras dura. Aquí, mientras dura, no se cancela ni se cambia nada: el plan se crea con
  * lo que había al pulsar, y cancelar o cambiar algo entonces no lo evitaría.
  */
 export function PanelProgramar({

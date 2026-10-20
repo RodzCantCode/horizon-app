@@ -1,7 +1,9 @@
+import type { DragEvent } from 'react';
 import Link from 'next/link';
 import { tituloEpisodio, type TarjetaCalendario } from '@/lib/calendario';
 import { avisoDePieza } from '@/lib/semanas';
 import { MarcaEstado } from '../semanas/MarcaEstado';
+import { empezarArrastre } from './Programar';
 import estilos from './calendario.module.css';
 
 const TEXTO_AVISO = { 'va-justa': 'va justa', revisar: 'revisar' } as const;
@@ -11,11 +13,37 @@ const TEXTO_AVISO = { 'va-justa': 'va justa', revisar: 'revisar' } as const;
 // que al cerrarse devuelve el foco aquí por data-pieza. El episodio: la tarjeta invertida con la hora,
 // «Episodio 06» y dónde sale; abre el panel de su semana (?semana=<lunes del plan>). `href` lo da
 // Calendario.tsx, con la semana que se ve.
-export function Tarjeta({ tarjeta, hoy, href }: { tarjeta: TarjetaCalendario; hoy: string; href: string }) {
+//
+// Con `arrastre` (fuera del modo programar y a partir de 1024 px), se arrastra a otro día: lo que
+// pasa al soltarla lo decide Calendario.tsx.
+export function Tarjeta({
+  tarjeta,
+  hoy,
+  href,
+  arrastre,
+}: {
+  tarjeta: TarjetaCalendario;
+  hoy: string;
+  href: string;
+  arrastre?: { arrastrando: boolean; alEmpezar: () => void; alTerminar: () => void };
+}) {
+  const eventos = arrastre
+    ? {
+        draggable: true,
+        'data-arrastrable': '',
+        'data-arrastrando': arrastre.arrastrando ? '' : undefined,
+        onDragStart: (evento: DragEvent<HTMLAnchorElement>) => {
+          empezarArrastre(evento.dataTransfer, tarjeta.tipo === 'post' ? tarjeta.pieza.id : `episodio-${tarjeta.plan.id}`);
+          arrastre.alEmpezar();
+        },
+        onDragEnd: arrastre.alTerminar,
+      }
+    : {};
+
   if (tarjeta.tipo === 'episodio') {
     const { plan } = tarjeta;
     return (
-      <Link href={href} scroll={false} className={estilos.tarjeta} data-tipo="episodio">
+      <Link href={href} scroll={false} className={estilos.tarjeta} data-tipo="episodio" {...eventos}>
         <span className={estilos.marcaEpisodio} aria-hidden="true" />
         <span className={estilos.texto}>
           {plan.horaEpisodio && <span className={estilos.hora}>{plan.horaEpisodio}</span>}
@@ -29,7 +57,7 @@ export function Tarjeta({ tarjeta, hoy, href }: { tarjeta: TarjetaCalendario; ho
   const { pieza, de } = tarjeta;
   const aviso = avisoDePieza(pieza, hoy);
   return (
-    <Link href={href} scroll={false} className={estilos.tarjeta} data-pieza={pieza.id}>
+    <Link href={href} scroll={false} className={estilos.tarjeta} data-pieza={pieza.id} {...eventos}>
       <MarcaEstado pieza={pieza} hoy={hoy} />
       <span className={estilos.texto}>
         {pieza.hora && <span className={estilos.hora}>{pieza.hora}</span>}

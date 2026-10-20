@@ -6,7 +6,7 @@
 // `lib/fechas.ts`.
 
 import { diaSemana, esFecha, lunesDe, sumarDias } from '@/lib/fechas';
-import { compararFechaYHora } from '@/lib/planes';
+import { compararFechaYHora, moverPiezaDePlan } from '@/lib/planes';
 import type { Estrategia, PiezaDePlan, Plan } from '@/lib/tipos';
 
 /**
@@ -70,6 +70,14 @@ function horaDe(tarjeta: TarjetaCalendario): string | null {
 }
 
 /**
+ * Las tarjetas de un día por hora, las que no tienen al final. `sort` es estable: a igual hora se
+ * mantiene el orden en que llegan.
+ */
+function ordenarDelDia(fecha: string, tarjetas: TarjetaCalendario[]): TarjetaCalendario[] {
+  return [...tarjetas].sort((a, b) => compararFechaYHora({ fecha, hora: horaDe(a) }, { fecha, hora: horaDe(b) }));
+}
+
+/**
  * Las `SEMANAS_CALENDARIO` semanas que empiezan en `lunes` (que ya es lunes: ver `inicioCalendario`).
  * Cada post va al día de su fecha, sea de un plan de esa semana o de otro: el D+4 de un plan del
  * viernes sale en la semana siguiente aunque esa no tenga plan. El episodio de cada plan con episodio
@@ -102,10 +110,8 @@ export function construirCalendario(
     const dias: DiaCalendario[] = [];
     for (let d = 0; d < DIAS_POR_SEMANA; d++) {
       const fecha = sumarDias(lunesDeLaSemana, d);
-      // `sort` es estable: a igual hora se mantiene el orden de llegada (posts, luego episodios).
-      const tarjetas = [...(tarjetasPorFecha.get(fecha) ?? [])].sort((a, b) =>
-        compararFechaYHora({ fecha, hora: horaDe(a) }, { fecha, hora: horaDe(b) }),
-      );
+      // A igual hora, en el orden de llegada: posts, luego episodios.
+      const tarjetas = ordenarDelDia(fecha, tarjetasPorFecha.get(fecha) ?? []);
       dias.push({ fecha, esHoy: fecha === hoy, esPasado: fecha < hoy, tarjetas });
     }
     semanas.push({
@@ -115,6 +121,43 @@ export function construirCalendario(
     });
   }
   return semanas;
+}
+
+/** Una tarjeta guardada que se ha soltado en otro día: un post (por su id) o el episodio de un plan. */
+export type Movimiento = { tipo: 'post'; id: string; fecha: string } | { tipo: 'episodio'; planId: string; fecha: string };
+
+/**
+ * Las semanas con la tarjeta del movimiento ya en su día nuevo: lo que enseña el Calendario mientras
+ * se guarda (su estado optimista). El post cambia de fecha como lo hará en la base
+ * (`moverPiezaDePlan`: si estaba programado, vuelve a pendiente y queda para revisar); el episodio
+ * cambia de día D y de semana, y sus posts no se mueven. Si el día nuevo no se ve, la tarjeta deja de
+ * verse; si la tarjeta no está, las semanas no cambian.
+ */
+export function moverTarjeta(semanas: SemanaCalendario[], movimiento: Movimiento): SemanaCalendario[] {
+  const esLaMovida = (t: TarjetaCalendario) =>
+    movimiento.tipo === 'post'
+      ? t.tipo === 'post' && t.pieza.id === movimiento.id
+      : t.tipo === 'episodio' && t.plan.id === movimiento.planId;
+
+  let movida: TarjetaCalendario | undefined;
+  for (const semana of semanas) {
+    for (const dia of semana.dias) movida ??= dia.tarjetas.find(esLaMovida);
+  }
+  if (movida === undefined) return semanas;
+
+  const { fecha } = movimiento;
+  const nueva: TarjetaCalendario =
+    movida.tipo === 'post'
+      ? { ...movida, pieza: moverPiezaDePlan(movida.pieza, fecha, movida.pieza.hora) }
+      : { ...movida, plan: { ...movida.plan, diaD: fecha, lunes: lunesDe(fecha) } };
+
+  return semanas.map((semana) => ({
+    ...semana,
+    dias: semana.dias.map((dia) => {
+      const tarjetas = dia.tarjetas.filter((t) => !esLaMovida(t));
+      return { ...dia, tarjetas: dia.fecha === fecha ? ordenarDelDia(fecha, [...tarjetas, nueva]) : tarjetas };
+    }),
+  }));
 }
 
 /** Lo que muestra siempre la mini fila de una estrategia: de D-2 a D+12, aunque no se use todo. */

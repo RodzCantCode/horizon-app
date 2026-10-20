@@ -297,6 +297,8 @@
   color: var(--azul-texto);
 }
 
+/* Lo que se arrastra: las tarjetas del borrador, programando, y las guardadas (posts y episodio)
+   fuera del modo programar. La que se arrastra se queda tenue en su sitio. */
 .tarjeta[data-arrastrable] {
   cursor: grab;
   user-select: none;

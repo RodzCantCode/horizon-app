@@ -3,6 +3,7 @@ import {
   construirCalendario,
   etiquetaDe,
   inicioCalendario,
+  moverTarjeta,
   rangoCalendario,
   rangoMiniFila,
   SEMANAS_CALENDARIO,
@@ -194,6 +195,58 @@ describe('construirCalendario', () => {
   it('con un lunes a mano en el pasado, todo el rango es pasado', () => {
     const semanas = construirCalendario([], [], hoy, '2026-09-07');
     expect(semanas.flatMap((s) => s.dias).every((d) => d.esPasado && !d.esHoy)).toBe(true);
+  });
+});
+
+describe('moverTarjeta', () => {
+  const hoy = '2026-10-20';
+  const lunes = '2026-10-19';
+  const ids = (tarjetas: { tipo: string; pieza?: PiezaDePlan }[]) =>
+    tarjetas.map((t) => (t.tipo === 'post' ? t.pieza!.id : 'episodio'));
+
+  it('lleva un post a su día nuevo, en su hora, y lo quita del de antes', () => {
+    const movido = pieza({ id: 'm', fecha: '2026-10-23', hora: '12:00' });
+    const otros = [pieza({ id: 'a', fecha: '2026-10-28', hora: '09:00' }), pieza({ id: 'b', fecha: '2026-10-28', hora: '18:00' })];
+    const semanas = construirCalendario([plan()], [movido, ...otros], hoy, lunes);
+    const despues = moverTarjeta(semanas, { tipo: 'post', id: 'm', fecha: '2026-10-28' });
+
+    expect(ids(despues[0].dias[4].tarjetas)).toEqual(['episodio']);
+    const dia = despues[1].dias[2];
+    expect(dia.fecha).toBe('2026-10-28');
+    expect(ids(dia.tarjetas)).toEqual(['a', 'm', 'b']);
+    expect(dia.tarjetas[1]).toEqual({ tipo: 'post', pieza: { ...movido, fecha: '2026-10-28' }, de: 'Del 06' });
+    // Las semanas de antes no cambian (useOptimistic las vuelve a usar si falla).
+    expect(ids(semanas[0].dias[4].tarjetas)).toEqual(['m', 'episodio']);
+  });
+
+  it('un post programado vuelve a pendiente y queda para revisar, como hará la base', () => {
+    const programado = pieza({ id: 'm', estado: 'programada', revisar: false });
+    const semanas = construirCalendario([plan()], [programado], hoy, lunes);
+    const [tarjeta] = moverTarjeta(semanas, { tipo: 'post', id: 'm', fecha: '2026-10-24' })[0].dias[5].tarjetas;
+    expect(tarjeta).toMatchObject({ pieza: { fecha: '2026-10-24', estado: 'pendiente', revisar: true } });
+  });
+
+  it('lleva el episodio a su día nuevo, con su día D y su semana, sin mover sus posts', () => {
+    const post = pieza({ id: 'p', fecha: '2026-10-23' });
+    const semanas = construirCalendario([plan()], [post], hoy, lunes);
+    const despues = moverTarjeta(semanas, { tipo: 'episodio', planId: 'plan1', fecha: '2026-10-27' });
+
+    expect(ids(despues[0].dias[4].tarjetas)).toEqual(['p']);
+    expect(despues[1].dias[1].tarjetas).toEqual([
+      { tipo: 'episodio', plan: { ...plan(), diaD: '2026-10-27', lunes: '2026-10-26' } },
+    ]);
+  });
+
+  it('a un día que no se ve, la tarjeta deja de verse', () => {
+    const semanas = construirCalendario([plan()], [pieza({ id: 'm' })], hoy, lunes);
+    const despues = moverTarjeta(semanas, { tipo: 'post', id: 'm', fecha: '2026-11-20' });
+    expect(despues.flatMap((s) => s.dias.flatMap((d) => ids(d.tarjetas)))).toEqual(['episodio']);
+  });
+
+  it('si la tarjeta no está, las semanas no cambian', () => {
+    const semanas = construirCalendario([plan()], [pieza()], hoy, lunes);
+    expect(moverTarjeta(semanas, { tipo: 'post', id: 'otra', fecha: '2026-10-21' })).toBe(semanas);
+    expect(moverTarjeta(semanas, { tipo: 'episodio', planId: 'otro', fecha: '2026-10-21' })).toBe(semanas);
   });
 });
 
