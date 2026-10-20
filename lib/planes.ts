@@ -22,8 +22,26 @@ export function compararFechaYHora(
 /**
  * Los días respecto a D en que puede ir una pieza, en una estrategia o en un plan: de D-1 a D+5 (el
  * mismo límite que pone la base en estrategia_piezas).
+ *
+ * Provisional: el rediseño del calendario lo sustituye por `DESPLAZAMIENTOS_ESTRATEGIA` y se quita
+ * cuando cada pantalla que lo usa pase a la nueva.
  */
 export const DESPLAZAMIENTOS: readonly number[] = [-1, 0, 1, 2, 3, 4, 5];
+
+/**
+ * Los días respecto a D que ofrece una estrategia: de D-7 a D+14 (el mismo límite que pone la base en
+ * estrategia_piezas). Solo acota lo que se elige al crear o editar una estrategia: un post de un plan
+ * puede llevarse a cualquier fecha (ver `desplazamientoDe`).
+ */
+export const DESPLAZAMIENTOS_ESTRATEGIA: readonly number[] = Array.from(
+  { length: 22 },
+  (_, i) => i - 7,
+);
+
+/** Días de D a la fecha, sin límite: un post llevado a D+20 o D-10 guarda 20 o -10. */
+export function desplazamientoDe(diaD: string, fecha: string): number {
+  return diasEntre(diaD, fecha);
+}
 
 /**
  * Copia fija de una pieza para un plan, en ese día respecto a D, con su hora habitual, pendiente y sin
@@ -49,18 +67,24 @@ export function copiarPieza(pieza: Pieza, diaD: string, desplazamiento: number):
  * Piezas de un plan a partir de una estrategia y el día D. Cada una es una copia fija de la pieza en
  * ese momento (`copiarPieza`). Salen ordenadas por fecha y hora; a igual fecha y hora se mantiene el
  * orden de la estrategia.
+ *
+ * `fechas[i]`, si viene y no es `null`, sustituye la fecha del ítem `i` de la estrategia (en el orden
+ * de `estrategia.items`) y su desplazamiento se recalcula con `desplazamientoDe`: es el caso de quien
+ * coloca los posts a mano al programar una semana. Sin `fechas`, o con `null`, la de la estrategia.
  */
 export function generarPiezasDePlan(
   estrategia: Estrategia,
   piezas: Pieza[],
   diaD: string,
+  fechas?: (string | null)[],
 ): NuevaPiezaDePlan[] {
-  const generadas = estrategia.items.map(({ piezaId, desplazamiento }): NuevaPiezaDePlan => {
+  const generadas = estrategia.items.map(({ piezaId, desplazamiento }, i): NuevaPiezaDePlan => {
     const pieza = piezas.find((p) => p.id === piezaId);
     if (!pieza) {
       throw new Error(`La estrategia «${estrategia.nombre}» usa la pieza «${piezaId}», que no existe`);
     }
-    return copiarPieza(pieza, diaD, desplazamiento);
+    const fecha = fechas?.[i];
+    return copiarPieza(pieza, diaD, fecha ? desplazamientoDe(diaD, fecha) : desplazamiento);
   });
   // `sort` es estable: las que empatan en fecha y hora conservan el orden de la estrategia.
   return generadas.sort(compararFechaYHora);

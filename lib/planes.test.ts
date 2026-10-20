@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   copiarPieza,
+  desplazamientoDe,
+  DESPLAZAMIENTOS_ESTRATEGIA,
   diaPermitido,
   estrategiaDisponible,
   estrategiasParaPlanificar,
@@ -251,6 +253,52 @@ describe('estrategiasParaPlanificar', () => {
     const piezas = piezasDePrueba();
     expect(estrategiasParaPlanificar([e1, e3], piezas, false).map((e) => e.id)).toEqual(['e3']);
     expect(estrategiasParaPlanificar([e1, e2, e3, e4], piezas, true).map((e) => e.id)).toEqual(['e1', 'e2']);
+  });
+});
+
+describe('generarPiezasDePlan con fechas', () => {
+  const dos = estrategia('e5', 'Dos', true, [['rp', 0], ['rc', 2]]);
+
+  it('una fecha sustituye la del ítem y recalcula su desplazamiento; null deja la de la estrategia', () => {
+    const g = generarPiezasDePlan(dos, piezasDePrueba(), '2026-10-30', [null, '2026-11-12']);
+    expect(g.map((p) => [p.nombreCorto, p.fecha, p.desplazamiento])).toEqual([
+      ['Clip principal', '2026-10-30', 0],
+      ['Clip secundario', '2026-11-12', 13],
+    ]);
+  });
+
+  it('las fechas siguen el orden de los ítems y el resultado sale ordenado por fecha', () => {
+    const g = generarPiezasDePlan(dos, piezasDePrueba(), '2026-10-30', ['2026-11-20', null]);
+    expect(g.map((p) => [p.nombreCorto, p.fecha, p.desplazamiento])).toEqual([
+      ['Clip secundario', '2026-11-01', 2],
+      ['Clip principal', '2026-11-20', 21],
+    ]);
+  });
+
+  it('admite un desplazamiento negativo y fuera de -7…14', () => {
+    const g = generarPiezasDePlan(dos, piezasDePrueba(), '2026-10-30', ['2026-10-20', null]);
+    expect(g[0]).toMatchObject({ nombreCorto: 'Clip principal', fecha: '2026-10-20', desplazamiento: -10 });
+  });
+
+  it('una lista más corta que los ítems deja el resto como en la estrategia', () => {
+    const g = generarPiezasDePlan(dos, piezasDePrueba(), '2026-10-30', [null]);
+    expect(g.map((p) => p.fecha)).toEqual(['2026-10-30', '2026-11-01']);
+  });
+});
+
+describe('desplazamientoDe', () => {
+  it('son los días de D a la fecha, sin límite', () => {
+    expect(desplazamientoDe('2026-10-30', '2026-11-19')).toBe(20);
+    expect(desplazamientoDe('2026-10-30', '2026-10-30')).toBe(0);
+    expect(desplazamientoDe('2026-10-30', '2026-10-20')).toBe(-10);
+  });
+});
+
+describe('DESPLAZAMIENTOS_ESTRATEGIA', () => {
+  it('va de -7 a 14', () => {
+    expect(DESPLAZAMIENTOS_ESTRATEGIA).toHaveLength(22);
+    expect(DESPLAZAMIENTOS_ESTRATEGIA[0]).toBe(-7);
+    expect(DESPLAZAMIENTOS_ESTRATEGIA.at(-1)).toBe(14);
   });
 });
 
