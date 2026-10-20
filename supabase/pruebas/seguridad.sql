@@ -1,4 +1,5 @@
--- Pruebas de seguridad y registro del esquema (migraciones esquema_inicial y ajustes_esquema).
+-- Pruebas de seguridad y registro del esquema (migraciones esquema_inicial, ajustes_esquema y
+-- registro_sin_desplazamiento).
 --
 -- Cómo se ejecutan: el archivo entero con execute_sql de la conexión supabase-horizon. Todo va en
 -- una transacción que acaba en rollback, así que los usuarios y las filas de prueba no se quedan en
@@ -355,6 +356,50 @@ begin
   end loop;
   insert into resultados (prueba, ok, detalle)
   values (prueba, cardinality(fallos) = 0, array_to_string(fallos, '; '));
+exception when others then
+  insert into resultados (prueba, ok, detalle) values (prueba, false, sqlerrm);
+end $$;
+
+-- 12. En plan_piezas, un cambio solo del desplazamiento (lo que hace mover_episodio) no se anota;
+--     con otra columna, se anota como siempre, desplazamiento incluido.
+do $$
+declare
+  prueba text := 'en plan_piezas un cambio solo del desplazamiento no se anota; con otra columna, sí';
+  acciones text;
+  detalle_mover jsonb;
+  esperado jsonb := '{"desplazamiento": {"antes": 3, "despues": 1},
+                      "fecha": {"antes": "2099-11-13", "despues": "2099-11-14"}}';
+begin
+  perform pg_temp.con_sesion('00000000-0000-4000-8000-0000000000a1');
+  insert into public.planes (id, lunes, dia_d, con_episodio, estrategia_id, estrategia_nombre)
+  values ('00000000-0000-4000-8000-0000000000d2', '2099-11-09', '2099-11-13', true,
+          '00000000-0000-4000-8000-0000000000c1', 'Estrategia de prueba');
+  insert into public.plan_piezas (id, plan_id, pieza_id, nombre, nombre_corto, formato, canales,
+                                  dias_preparacion, desplazamiento, fecha, hora)
+  values ('00000000-0000-4000-8000-0000000000e2', '00000000-0000-4000-8000-0000000000d2',
+          '00000000-0000-4000-8000-0000000000b1', 'T9 · Pieza de prueba', 'Pieza de prueba', 'reel',
+          '{ig}', 2, 0, '2099-11-13', '18:00');
+  -- solo el desplazamiento: no se anota
+  update public.plan_piezas set desplazamiento = 3
+   where id = '00000000-0000-4000-8000-0000000000e2';
+  -- desplazamiento y fecha: mover, con las dos columnas
+  update public.plan_piezas set desplazamiento = 1, fecha = '2099-11-14'
+   where id = '00000000-0000-4000-8000-0000000000e2';
+  -- desplazamiento y revisar: editar
+  update public.plan_piezas set desplazamiento = 2, revisar = true
+   where id = '00000000-0000-4000-8000-0000000000e2';
+  select string_agg(accion, ',' order by accion) into acciones
+    from public.registro
+   where fila_id = '00000000-0000-4000-8000-0000000000e2';
+  select detalle into detalle_mover
+    from public.registro
+   where fila_id = '00000000-0000-4000-8000-0000000000e2' and accion = 'mover';
+  reset role;
+  insert into resultados (prueba, ok, detalle)
+  values (prueba,
+          coalesce(acciones = 'crear,editar,mover' and detalle_mover = esperado, false),
+          format('acciones %s; detalle de mover %s', coalesce(acciones, 'ninguna'),
+                 coalesce(detalle_mover::text, 'ninguno')));
 exception when others then
   insert into resultados (prueba, ok, detalle) values (prueba, false, sqlerrm);
 end $$;

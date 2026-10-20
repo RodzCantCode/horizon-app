@@ -210,7 +210,9 @@ Supabase (Site URL, registro desactivado, SMTP y plantillas de correo) están en
   `mover_episodio` (solo el episodio; recalcula el desplazamiento de los posts y no toca su fecha,
   hora ni estado) y `cambiar_estrategia`.
 - **El registro lo escribe la base de datos** con disparadores (triggers) que toman el usuario de la
-  sesión, no la app: no puede olvidarse ni saltarse.
+  sesión, no la app: no puede olvidarse ni saltarse. Un cambio de un post en el que solo cambia su
+  desplazamiento (lo que hace `mover_episodio`) no se anota: el post sigue igual; el cambio de D se
+  anota en el plan.
 - **Seguridad:** RLS en todas las tablas. Solo usuarios con sesión pueden leer y escribir; los tres
   pueden lo mismo. Sin sesión, ninguna fila. El registro público de Supabase está desactivado y solo
   se entra por invitación (ver [Acceso](#acceso-solo-por-invitación)).

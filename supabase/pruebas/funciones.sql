@@ -1,6 +1,7 @@
 -- Pruebas de las funciones de varias filas de los planes (migraciones funciones_planes y
 -- calendario): crear_plan, mover_plan, mover_episodio y cambiar_estrategia, y los límites de
--- estrategia_piezas.desplazamiento.
+-- estrategia_piezas.desplazamiento. También lo que anota el registro al mover solo el episodio
+-- (migración registro_sin_desplazamiento).
 --
 -- Cómo se ejecutan: igual que seguridad.sql, el archivo entero con execute_sql de la conexión
 -- supabase-horizon. Todo va en una transacción que acaba en rollback, así que el usuario, los planes
@@ -703,6 +704,71 @@ begin
   insert into resultados (prueba, ok, detalle)
   values (prueba, coalesce(error_mover = 'P0001 plan_no_existe', false),
           coalesce(error_mover, 'sin error'));
+exception when others then
+  insert into resultados (prueba, ok, detalle) values (prueba, false, sqlerrm);
+end $$;
+
+-- 16. Mover solo el episodio no anota nada en sus posts: solo cambia su desplazamiento, y el post
+--     sigue igual para quien lo mira (migración registro_sin_desplazamiento). En el plan sí anota el
+--     cambio de D y lunes. Mover después un post de verdad (su fecha, con su desplazamiento, como
+--     editarPiezaDePlan) sigue anotando «mover».
+do $$
+declare
+  prueba text := 'mover_episodio no anota nada en los posts y sí en el plan; mover un post anota mover';
+  cambio_plan_esperado jsonb := '{"lunes": {"antes": "2099-08-03", "despues": "2099-08-10"},
+                                  "dia_d": {"antes": "2099-08-07", "despues": "2099-08-12"}}';
+  mover_esperado jsonb := '{"fecha": {"antes": "2099-08-08", "despues": "2099-08-09"},
+                            "desplazamiento": {"antes": -4, "despues": -3}}';
+  id_plan uuid;
+  id_post uuid;
+  posts_antes int;
+  posts_despues int;
+  ediciones_plan int;
+  cambio_plan jsonb;
+  anotaciones_post text;
+  detalle_mover jsonb;
+  fallos text[] := '{}';
+begin
+  perform pg_temp.con_sesion('00000000-0000-4000-8000-0000000000a1');
+  id_plan := public.crear_plan(pg_temp.plan('2099-08-03', '2099-08-07'),
+                               jsonb_build_array(pg_temp.pieza('Programada', 0, '2099-08-07', '18:00'),
+                                                 pg_temp.pieza('Pendiente', 1, '2099-08-08')));
+  update public.plan_piezas set estado = 'programada'
+   where plan_id = id_plan and nombre = 'Programada';
+  select pp.id into id_post from public.plan_piezas as pp
+   where pp.plan_id = id_plan and pp.nombre = 'Pendiente';
+  select count(*) into posts_antes
+    from public.registro as r
+   where r.fila_id in (select pp.id from public.plan_piezas as pp where pp.plan_id = id_plan);
+  -- Del viernes 7 al miércoles 12: el episodio pasa a la semana siguiente y los posts se quedan.
+  perform public.mover_episodio(id_plan, '2099-08-12');
+  select count(*) into posts_despues
+    from public.registro as r
+   where r.fila_id in (select pp.id from public.plan_piezas as pp where pp.plan_id = id_plan);
+  select count(*), (array_agg(r.detalle))[1]
+    into ediciones_plan, cambio_plan
+    from public.registro as r
+   where r.fila_id = id_plan and r.accion = 'editar';
+  -- Mover de verdad el post pendiente, del sábado 8 al domingo 9 (D-4 pasa a D-3).
+  update public.plan_piezas set fecha = '2099-08-09', desplazamiento = -3 where id = id_post;
+  select string_agg(r.accion, ',' order by r.accion), (array_agg(r.detalle) filter (where r.accion = 'mover'))[1]
+    into anotaciones_post, detalle_mover
+    from public.registro as r
+   where r.fila_id = id_post;
+  reset role;
+  if posts_despues is distinct from posts_antes then
+    fallos := fallos || format('los posts tenían %s anotaciones y ahora %s', posts_antes, posts_despues);
+  end if;
+  if ediciones_plan <> 1 or cambio_plan is distinct from cambio_plan_esperado then
+    fallos := fallos || format('registro del plan: %s ediciones, %s', ediciones_plan,
+                               coalesce(cambio_plan::text, 'vacío'));
+  end if;
+  if anotaciones_post is distinct from 'crear,mover' or detalle_mover is distinct from mover_esperado then
+    fallos := fallos || format('registro del post movido: %s, %s', coalesce(anotaciones_post, 'vacío'),
+                               coalesce(detalle_mover::text, 'sin mover'));
+  end if;
+  insert into resultados (prueba, ok, detalle)
+  values (prueba, cardinality(fallos) = 0, array_to_string(fallos, '; '));
 exception when others then
   insert into resultados (prueba, ok, detalle) values (prueba, false, sqlerrm);
 end $$;
