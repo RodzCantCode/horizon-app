@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title: 'Calendario · Horizon Sport',
 };
 
-// Calendario (docs/rediseno-calendario.md § La pantalla): tres semanas seguidas desde la de
+// Calendario (docs/diseno.md § Calendario): tres semanas seguidas desde la de
 // `?desde=<lunes>` (sin él, o si no es un lunes que existe, la de hoy), con los posts y el episodio
 // de cada día. Pulsar una tarjeta abre los paneles de siempre (?pieza=<id>, ?semana=<lunes>), los
 // mismos que en Inicio. `?programar=<lunes>` abre el modo programar esa semana (Programar.tsx).

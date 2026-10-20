@@ -1,5 +1,5 @@
 /* Pantalla Calendario (Calendario.tsx, Tarjeta.tsx y Programar.tsx), con el aspecto del boceto
-   aprobado (docs/rediseno-calendario.md § La pantalla): el titular con sus botones, y las semanas una
+   aprobado (docs/diseno.md § Calendario): el titular con sus botones, y las semanas una
    debajo de otra. En escritorio los días van en fila, siete columnas; por debajo de 1024 px, en lista
    (al final del archivo), y ahí no se arrastra. Solo tokens de app/global.css. */
 

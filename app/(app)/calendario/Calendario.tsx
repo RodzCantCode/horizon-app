@@ -37,7 +37,7 @@ import estilos from './calendario.module.css';
 // a partir de 1024 px, se arrastran a otro día, igual que el episodio.
 //
 // Fuera del modo programar, a partir de 1024 px, se arrastra lo ya guardado
-// (docs/rediseno-calendario.md § Mover lo ya programado): soltar un post en otro día lo guarda con su
+// (docs/diseno.md § Calendario): soltar un post en otro día lo guarda con su
 // hora de siempre (`editarPiezaDePlan`) y soltar el episodio mueve solo el episodio (`moverEpisodio`).
 // Mientras se guarda, la tarjeta ya se ve en su día nuevo (`useOptimistic`); si la acción devuelve un
 // error, vuelve a su sitio y el error sale en un aviso (Toast de Mochi).

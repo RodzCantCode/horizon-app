@@ -125,7 +125,7 @@ async function generarConEstrategia(
 }
 
 /**
- * Crea el plan de una semana con sus piezas (docs/diseno.md § Planificar). Lo que llega del
+ * Crea el plan de una semana con sus piezas (docs/diseno.md § Programar). Lo que llega del
  * navegador se vuelve a comprobar aquí: el día D, y cada fecha de `fechas`, tiene que ser una fecha;
  * la hora del episodio, una hora, y la estrategia existe, es del tipo que toca y no usa piezas
  * archivadas. La semana del plan (`lunes`) es la del día D, la calcula el servidor. Las piezas las

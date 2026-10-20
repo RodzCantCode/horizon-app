@@ -32,11 +32,11 @@ import { MiniFila } from '../semanas/MiniFila';
 import estilosPaneles from '../semanas/semanas.module.css';
 import estilos from './calendario.module.css';
 
-// El modo programar del Calendario (docs/rediseno-calendario.md § Programar un episodio nuevo): el
-// panel de la izquierda (o de encima, en pantallas estrechas) con los datos del episodio y las
-// estrategias, y las tarjetas del borrador que Calendario.tsx pinta en los días. Nada se guarda hasta
-// **Guardar**, que crea el plan de una vez con `crearPlan`. El estado (Programacion) lo guarda
-// Calendario.tsx, porque lo usan el panel y los días; la lógica del borrador es de lib/programar.ts.
+// El modo programar del Calendario (docs/diseno.md § Programar): el panel de la izquierda (o de
+// encima, en pantallas estrechas) con los datos del episodio y las estrategias, y las tarjetas del
+// borrador que Calendario.tsx pinta en los días. Nada se guarda hasta **Guardar**, que crea el
+// plan de una vez con `crearPlan`. El estado (Programacion) lo guarda Calendario.tsx, porque lo
+// usan el panel y los días; la lógica del borrador es de lib/programar.ts.
 
 /** Lo que lee el servidor para programar (page.tsx). */
 export type DatosParaProgramar = {

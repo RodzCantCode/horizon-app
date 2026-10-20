@@ -1,7 +1,6 @@
-// Lógica pura del modo programar del Calendario (docs/rediseno-calendario.md § Programar un episodio
-// nuevo): el borrador de un plan mientras se coloca, antes de guardarlo con `crearPlan`. Sin acceso a
-// datos ni pantalla: recibe y devuelve valores, así se prueba entera. Ninguna función cambia el
-// borrador que recibe.
+// Lógica pura del modo programar del Calendario (docs/diseno.md § Programar): el borrador de un
+// plan mientras se coloca, antes de guardarlo con `crearPlan`. Sin acceso a datos ni pantalla:
+// recibe y devuelve valores, así se prueba entera. Ninguna función cambia el borrador que recibe.
 //
 // Fechas `YYYY-MM-DD` y horas `HH:MM` de reloj en `Europe/Madrid`; la aritmética de días es de
 // `lib/fechas.ts`.
