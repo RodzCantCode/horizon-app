@@ -1,5 +1,5 @@
 // Lógica pura de la semana de Inicio: qué semanas se ven, qué plan y qué piezas tiene cada día, y
-// los textos de sus encabezados y de los paneles (pieza, planificar y semana), que también abre el
+// los textos de sus encabezados y de los paneles (pieza y semana), que también abre el
 // Calendario. Sin acceso a datos:
 // recibe los planes, las piezas y el registro ya leídos (`lib/datos/`) y el día de hoy en España
 // (`hoyEnMadrid`), así se prueba entera.
@@ -192,7 +192,7 @@ export function fraseDeRegistro(e: EntradaRegistro): string {
   return `${e.nombre} ${VERBOS[e.accion] ?? 'la cambió'} · ${dia} ${mes}`;
 }
 
-// --- Panel de planificar ---------------------------------------------
+// --- Títulos de semana ---------------------------------------------
 
 /** «del 19 al 25 oct»; si la semana cambia de mes, «del 26 oct al 1 nov». */
 function delLunesAlDomingo(lunes: string): string {
@@ -200,11 +200,6 @@ function delLunesAlDomingo(lunes: string): string {
   const fin = diaYMes(sumarDias(lunes, 6));
   const desde = inicio.mes === fin.mes ? `${inicio.dia}` : `${inicio.dia} ${inicio.mes}`;
   return `del ${desde} al ${fin.dia} ${fin.mes}`;
-}
-
-/** «Planificar la semana del 19 al 25 oct»; si cambia de mes, «del 26 oct al 1 nov». */
-export function tituloPlanificar(lunes: string): string {
-  return `Planificar la semana ${delLunesAlDomingo(lunes)}`;
 }
 
 // --- Panel de una semana ---------------------------------------------

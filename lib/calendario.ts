@@ -54,13 +54,13 @@ export function rangoCalendario(lunes: string): { desde: string; hasta: string }
 }
 
 /** De qué episodio es un post: «Del 06», «Del episodio» (sin número) o «Sin episodio». */
-export function etiquetaDe(plan: Plan): string {
+export function etiquetaDe(plan: Pick<Plan, 'conEpisodio' | 'numero'>): string {
   if (!plan.conEpisodio) return 'Sin episodio';
   return plan.numero === null ? 'Del episodio' : `Del ${plan.numero}`;
 }
 
 /** Lo que dice la tarjeta del episodio: «Episodio 06», o «Episodio» si aún no tiene número. */
-export function tituloEpisodio(plan: Plan): string {
+export function tituloEpisodio(plan: Pick<Plan, 'numero'>): string {
   return plan.numero === null ? 'Episodio' : `Episodio ${plan.numero}`;
 }
 

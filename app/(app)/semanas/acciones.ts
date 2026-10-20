@@ -33,6 +33,7 @@ const SIN_EPISODIO = 'Esa semana no tiene episodio';
 const ESTRATEGIA_NO_DISPONIBLE = 'Esa estrategia ya no está disponible';
 const PIEZA_NO_DISPONIBLE = 'Esa pieza ya no está disponible';
 const SEMANA_CON_PLAN = 'Esa semana ya tiene plan';
+const ESTRATEGIA_CAMBIADA = 'La estrategia ha cambiado mientras programabas. Vuelve a elegirla.';
 
 /**
  * Cambia el estado de una pieza de plan. Al marcarla como programada se quita también la marca de
@@ -105,6 +106,13 @@ async function generarConEstrategia(
     (e) => e.id === estrategiaId,
   );
   if (estrategia) {
+    // Las fechas van una por ítem, en el orden de la estrategia que leyó el navegador. Si ahora tiene
+    // otro número de ítems (alguien la ha editado mientras se programaba), ya no se sabe qué fecha es
+    // de qué post: no se crea nada y se refresca para que el modo programar la vuelva a leer.
+    if (fechas && fechas.length !== estrategia.items.length) {
+      refresh();
+      return { error: ESTRATEGIA_CAMBIADA };
+    }
     try {
       return { estrategia, nuevas: generarPiezasDePlan(estrategia, piezas, diaD, fechas) };
     } catch {
@@ -122,8 +130,9 @@ async function generarConEstrategia(
  * la hora del episodio, una hora, y la estrategia existe, es del tipo que toca y no usa piezas
  * archivadas. La semana del plan (`lunes`) es la del día D, la calcula el servidor. Las piezas las
  * genera el servidor con las piezas y la estrategia de la base, nunca las manda el navegador; con
- * `fechas`, cada post va en la suya, por lejos de D que quede. Sin episodio no se guardan número,
- * invitado, tema ni hora del episodio.
+ * `fechas`, cada post va en la suya, por lejos de D que quede; si no trae una por ítem (la estrategia
+ * ha cambiado mientras se programaba), avisa sin crear nada y refresca. Sin episodio no se guardan
+ * número, invitado, tema ni hora del episodio.
  *
  * Plan y piezas se crean de una vez con la función `crear_plan` de la base. Si esa semana ya tiene
  * plan (doble pulsación, o dos personas a la vez), la base no crea otro y aquí se avisa. Cuando el

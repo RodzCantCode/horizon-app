@@ -180,6 +180,17 @@ describe('crearPlan', () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
+  it('si la estrategia ha cambiado de número de posts mientras se programaba, avisa, no crea nada y refresca', async () => {
+    // E1 tiene cinco ítems; el navegador colocó cuatro (la estrategia que leyó al abrir el modo).
+    for (const fechas of [['2026-10-22', null, null, null], ['2026-10-22', null, null, null, null, null]]) {
+      expect(await crearPlan({ ...entrada, fechas })).toEqual({
+        error: 'La estrategia ha cambiado mientras programabas. Vuelve a elegirla.',
+      });
+    }
+    expect(llamadasRpc).toEqual([]);
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
   it('una hora del episodio que no es una hora no llega a la base', async () => {
     expect(await crearPlan({ ...entrada, horaEpisodio: '25:00' })).toEqual({ error: 'Esa hora no es válida' });
     expect(llamadasRpc).toEqual([]);

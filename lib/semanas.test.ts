@@ -16,7 +16,6 @@ import {
   textoCanales,
   textoFormato,
   textoPreparacion,
-  tituloPlanificar,
   tituloSemana,
 } from '@/lib/semanas';
 import type { PiezaDePlan, Plan } from '@/lib/tipos';
@@ -287,17 +286,6 @@ describe('fechaLarga', () => {
   it('día de la semana entero, número y mes', () => {
     expect(fechaLarga('2026-10-23')).toBe('Viernes 23 oct');
     expect(fechaLarga('2026-11-01')).toBe('Domingo 1 nov');
-  });
-});
-
-describe('tituloPlanificar', () => {
-  it('nombra la semana de lunes a domingo', () => {
-    expect(tituloPlanificar('2026-10-19')).toBe('Planificar la semana del 19 al 25 oct');
-  });
-
-  it('con los dos meses si la semana cambia de mes o de año', () => {
-    expect(tituloPlanificar('2026-10-26')).toBe('Planificar la semana del 26 oct al 1 nov');
-    expect(tituloPlanificar('2026-12-28')).toBe('Planificar la semana del 28 dic al 3 ene');
   });
 });
 

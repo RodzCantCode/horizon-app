@@ -279,65 +279,15 @@
   color: var(--papel-medio);
 }
 
-/* --- Panel de planificar (PanelPlanificar.tsx) ----------------------- */
-/* De arriba abajo: Sí/No, los datos del episodio (o el día de referencia), las estrategias con su
-   mini fila, la vista previa y Crear plan. El botón y su error usan .accionPieza y .errorPieza, los
-   del panel de una pieza. */
-.formularioPlan {
-  display: flex;
-  flex-direction: column;
-  gap: 1.75rem;
-}
-
-/* Los campos van de dos en dos cuando el panel es ancho (la ventana de escritorio) y uno debajo de
-   otro en la hoja del móvil: como mucho dos columnas (la mitad del ancho, menos medio hueco) y nunca
-   de menos de 16rem. Igual en .campos. */
-.camposPlan {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(max(16rem, calc(50% - 0.375rem)), 1fr));
-  gap: 0.75rem;
-}
-
-.yaTienePlan,
+/* --- Textos de los paneles ------------------------------------------ */
 .sinEstrategias {
   font-size: 0.9375rem;
   line-height: 1.4;
   color: var(--papel-medio);
 }
 
-.vistaPrevia {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--linea);
-}
-
-.tituloVistaPrevia {
-  font-size: 0.8125rem;
-  font-weight: 400;
-  color: var(--papel-tenue);
-}
-
-.piezasPrevia {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  font-size: 0.9375rem;
-  line-height: 1.35;
-}
-
-/* Día, hora y nombre en columnas, para que las fechas se lean de un vistazo. */
-.piezaPrevia {
-  display: grid;
-  grid-template-columns: 3.5rem 4rem minmax(0, 1fr);
-  gap: 0.75rem;
-  align-items: baseline;
-}
-
+/* Día, hora y nombre de cada pieza en columnas, para que las fechas se lean de un vistazo (las piezas
+   del panel de una semana). */
 .diaPrevia {
   font-size: 0.8125rem;
   letter-spacing: 0.04em;
@@ -353,8 +303,7 @@
   white-space: nowrap;
 }
 
-/* Una hora que no existe en España ese día (la que salta en marzo): en ámbar, con su aviso debajo. */
-.horaPrevia[data-aviso],
+/* Una hora que no existe en España ese día (la que salta en marzo): el aviso, en ámbar. */
 .avisoHora {
   color: var(--ambar);
 }
@@ -476,8 +425,8 @@
 }
 
 /* --- Panel de una semana (PanelSemana.tsx) --------------------------- */
-/* Sus piezas: marca, día, hora y nombre en columnas, como la vista previa de planificar (con sus
-   clases para el día, la hora y el nombre). Cada una abre su panel. */
+/* Sus piezas: marca, día, hora y nombre en columnas (con .diaPrevia, .horaPrevia y .nombrePrevia).
+   Cada una abre su panel. */
 .piezasSemana {
   list-style: none;
   margin: 0;
