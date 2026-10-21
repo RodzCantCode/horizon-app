@@ -71,6 +71,10 @@ que se construyó, en [plan-calendario.md](plan-calendario.md).
 - **Un solo nombre por pieza**, claro, sin códigos: «Valor + CTA», no «T2 · Valor + CTA». Desaparece
   el nombre corto de la interfaz.
 - Cada pieza conserva formato (Carrusel o Reel), canales, días de preparación y hora habitual.
+- **Cada episodio da 10 reels** (dato de Mario, 21-oct-2026). No todos salen en la semana de
+  publicación: varios se guardan para otros tipos de post (semanas sin episodio, recopilaciones,
+  clips de archivo). Las estrategias tienen que pensarse como el reparto de esos 10 reels, no solo
+  como lo que se publica alrededor del episodio.
 - **Estrategias reales: 4 con episodio y 2 sin**, cada una con nombre claro y una línea que diga
   para qué sirve. Su contenido lo define Mario; las del boceto («Calentar antes», «Golpe de salida»,
   «Goteo largo», «Mínima») son provisionales.
